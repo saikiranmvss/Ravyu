@@ -1,22 +1,30 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Ravyu Business Hub API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: user
+  - name: reviews
+  - name: ai
+  - name: business
+  - name: requests
+  - name: analytics
+  - name: reports
+  - name: settings
+  - name: public
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +32,1426 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  /auth/signup:
+    post:
+      operationId: signup
+      tags: [auth]
+      summary: Register with email/password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+        "400":
+          description: Validation error
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email/password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout and revoke refresh token
+      responses:
+        "204":
+          description: Logged out
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshInput"
+      responses:
+        "200":
+          description: New tokens
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+        "401":
+          description: Invalid or expired refresh token
+
+  /auth/firebase:
+    post:
+      operationId: firebaseAuth
+      tags: [auth]
+      summary: Sign in or register via Firebase Google token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FirebaseInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FirebaseAuthResult"
+        "401":
+          description: Invalid Firebase token
+
+  # ── User ──────────────────────────────────────────────────────────────────
+  /user/profile:
+    get:
+      operationId: getUserProfile
+      tags: [user]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+    put:
+      operationId: updateUserProfile
+      tags: [user]
+      summary: Update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfileUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /user/onboarding:
+    put:
+      operationId: completeOnboarding
+      tags: [user]
+      summary: Save onboarding wizard data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingInput"
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /user/change-password:
+    put:
+      operationId: changePassword
+      tags: [user]
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "204":
+          description: Password changed
+        "400":
+          description: Wrong current password
+
+  /user/delete:
+    delete:
+      operationId: deleteAccount
+      tags: [user]
+      summary: Delete user account and all data
+      responses:
+        "204":
+          description: Account deleted
+
+  # ── Reviews ───────────────────────────────────────────────────────────────
+  /reviews:
+    get:
+      operationId: getReviews
+      tags: [reviews]
+      summary: List stored reviews
+      parameters:
+        - in: query
+          name: rating
+          schema:
+            type: integer
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: offset
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewListResult"
+
+  /reviews/scrape:
+    post:
+      operationId: scrapeReviews
+      tags: [reviews]
+      summary: Scrape reviews from Google Maps
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScrapeInput"
+      responses:
+        "200":
+          description: Scrape complete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScrapeResult"
+        "400":
+          description: Invalid URL
+
+  /reviews/{id}:
+    delete:
+      operationId: deleteReview
+      tags: [reviews]
+      summary: Delete a stored review
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── AI ────────────────────────────────────────────────────────────────────
+  /ai/generate-reply:
+    post:
+      operationId: generateReply
+      tags: [ai]
+      summary: AI-generate a reply to a review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateReplyInput"
+      responses:
+        "200":
+          description: Generated reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateReplyResult"
+
+  /ai/generate-post:
+    post:
+      operationId: generatePost
+      tags: [ai]
+      summary: AI-generate social post from a review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GeneratePostInput"
+      responses:
+        "200":
+          description: Generated post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratePostResult"
+
+  /ai/generate-content:
+    post:
+      operationId: generateContent
+      tags: [ai]
+      summary: AI-generate custom content from a prompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateContentInput"
+      responses:
+        "200":
+          description: Generated content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateContentResult"
+
+  # ── Business Profile ──────────────────────────────────────────────────────
+  /business/profile:
+    get:
+      operationId: getBusinessProfile
+      tags: [business]
+      summary: Get business profile
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessProfile"
+        "404":
+          description: No profile yet
+    post:
+      operationId: createBusinessProfile
+      tags: [business]
+      summary: Create business profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessProfileInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessProfile"
+    put:
+      operationId: updateBusinessProfile
+      tags: [business]
+      summary: Update business profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessProfileInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessProfile"
+
+  # ── Business Services ─────────────────────────────────────────────────────
+  /business/services:
+    get:
+      operationId: getBusinessServices
+      tags: [business]
+      summary: List services
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BusinessService"
+    post:
+      operationId: createBusinessService
+      tags: [business]
+      summary: Create a service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessServiceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessService"
+
+  /business/services/{id}:
+    put:
+      operationId: updateBusinessService
+      tags: [business]
+      summary: Update a service
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessServiceInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessService"
+    delete:
+      operationId: deleteBusinessService
+      tags: [business]
+      summary: Delete a service
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Dashboard ─────────────────────────────────────────────────────────────
+  /business/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [business]
+      summary: Dashboard KPIs and summary
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  # ── Review Requests ───────────────────────────────────────────────────────
+  /business/requests:
+    get:
+      operationId: getReviewRequests
+      tags: [requests]
+      summary: List review requests
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, sent, opened, completed]
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReviewRequest"
+    post:
+      operationId: createReviewRequest
+      tags: [requests]
+      summary: Create a review request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRequestInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewRequest"
+
+  /business/requests/bulk:
+    post:
+      operationId: bulkImportRequests
+      tags: [requests]
+      summary: Bulk import review requests via CSV data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkImportInput"
+      responses:
+        "200":
+          description: Imported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkImportResult"
+
+  /business/requests/{id}:
+    put:
+      operationId: updateReviewRequest
+      tags: [requests]
+      summary: Update a review request status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRequestUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewRequest"
+    delete:
+      operationId: deleteReviewRequest
+      tags: [requests]
+      summary: Delete a review request
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /business/requests/{id}/send-email:
+    post:
+      operationId: sendReviewRequestEmail
+      tags: [requests]
+      summary: Send review request email to customer
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendEmailResult"
+
+  # ── Analytics ─────────────────────────────────────────────────────────────
+  /business/analytics:
+    get:
+      operationId: getAnalytics
+      tags: [analytics]
+      summary: Get landing page analytics
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsData"
+
+  # ── Reports ───────────────────────────────────────────────────────────────
+  /business/reports:
+    get:
+      operationId: getReports
+      tags: [reports]
+      summary: Get review stats report from stored reviews
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportsData"
+
+  /business/reports/export:
+    get:
+      operationId: exportReportsCsv
+      tags: [reports]
+      summary: Export review report as CSV
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  # ── Settings ──────────────────────────────────────────────────────────────
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get user settings
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update user settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserSettingsInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+
+  # ── Public endpoints ──────────────────────────────────────────────────────
+  /public/business/{slug}:
+    get:
+      operationId: getPublicBusiness
+      tags: [public]
+      summary: Public business landing page data
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicBusinessData"
+        "404":
+          description: Not found
+
+  /public/business/{slug}/track-view:
+    post:
+      operationId: trackPageView
+      tags: [public]
+      summary: Track a page view on the public landing
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Tracked
+
+  /public/business/{slug}/track-review-click:
+    post:
+      operationId: trackReviewClick
+      tags: [public]
+      summary: Track a review CTA click on the public landing
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Tracked
+
+  /public/review/{slug}:
+    get:
+      operationId: getReviewCollectionPage
+      tags: [public]
+      summary: Review collection page data (Google review URL)
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewCollectionData"
+        "404":
+          description: Not found
+
+  /public/review/{slug}/{token}:
+    get:
+      operationId: getTrackedReviewLink
+      tags: [public]
+      summary: Open tracked review link; mark request opened
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewCollectionData"
+        "404":
+          description: Not found
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ── Auth ─────────────────────────────────────────────────────────────────
+    SignupInput:
+      type: object
+      required: [email, password, username]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        username:
+          type: string
+          minLength: 2
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    RefreshInput:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    FirebaseInput:
+      type: object
+      required: [idToken]
+      properties:
+        idToken:
+          type: string
+
+    AuthTokens:
+      type: object
+      required: [accessToken, refreshToken, user]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserProfile"
+
+    FirebaseAuthResult:
+      type: object
+      required: [accessToken, refreshToken, user, isNewUser]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserProfile"
+        isNewUser:
+          type: boolean
+
+    # ── User ─────────────────────────────────────────────────────────────────
+    UserProfile:
+      type: object
+      required: [id, email, username, profileComplete]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        username:
+          type: string
+        phone:
+          type: ["string", "null"]
+        company:
+          type: ["string", "null"]
+        googleMapsUrl:
+          type: ["string", "null"]
+        businessType:
+          type: ["string", "null"]
+        industry:
+          type: ["string", "null"]
+        challenges:
+          type: ["array", "null"]
+          items:
+            type: string
+        profileComplete:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UserProfileUpdate:
+      type: object
+      properties:
+        username:
+          type: string
+        phone:
+          type: string
+        company:
+          type: string
+
+    OnboardingInput:
+      type: object
+      required: [phone, company, businessType, industry, challenges]
+      properties:
+        phone:
+          type: string
+        company:
+          type: string
+        businessType:
+          type: string
+          enum: [single, multiple, franchise, agency]
+        industry:
+          type: string
+          enum: [restaurant, healthcare, hospitality, retail, real_estate, professional, education, other]
+        challenges:
+          type: array
+          items:
+            type: string
+
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 6
+
+    # ── Reviews ───────────────────────────────────────────────────────────────
+    Review:
+      type: object
+      required: [id, author, rating, text, date, createdAt]
+      properties:
+        id:
+          type: integer
+        author:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        text:
+          type: string
+        date:
+          type: string
+        sourceUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    ReviewListResult:
+      type: object
+      required: [reviews, total]
+      properties:
+        reviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/Review"
+        total:
+          type: integer
+
+    ScrapeInput:
+      type: object
+      required: [mapsUrl]
+      properties:
+        mapsUrl:
+          type: string
+        maxReviews:
+          type: integer
+          default: 100
+          maximum: 500
+
+    ScrapeResult:
+      type: object
+      required: [imported, total]
+      properties:
+        imported:
+          type: integer
+        total:
+          type: integer
+        message:
+          type: string
+
+    # ── AI ────────────────────────────────────────────────────────────────────
+    GenerateReplyInput:
+      type: object
+      required: [reviewText, rating]
+      properties:
+        reviewText:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        author:
+          type: string
+        businessName:
+          type: string
+        tone:
+          type: string
+          enum: [professional, casual, enthusiastic, formal, humorous]
+          default: professional
+
+    GenerateReplyResult:
+      type: object
+      required: [reply, sentiment]
+      properties:
+        reply:
+          type: string
+        sentiment:
+          type: string
+          enum: [positive, neutral, negative]
+
+    GeneratePostInput:
+      type: object
+      required: [reviewText, platform]
+      properties:
+        reviewText:
+          type: string
+        platform:
+          type: string
+          enum: [instagram, facebook, twitter, linkedin, google_business]
+        tone:
+          type: string
+          enum: [professional, casual, enthusiastic, formal, humorous]
+          default: professional
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+
+    GeneratePostResult:
+      type: object
+      required: [caption]
+      properties:
+        caption:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+
+    GenerateContentInput:
+      type: object
+      required: [prompt, platform, contentType]
+      properties:
+        prompt:
+          type: string
+        platform:
+          type: string
+          enum: [instagram, facebook, twitter, linkedin, google_business]
+        contentType:
+          type: string
+          enum: [text, image]
+        tone:
+          type: string
+          enum: [professional, casual, enthusiastic, formal, humorous]
+          default: professional
+
+    GenerateContentResult:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+
+    # ── Business ──────────────────────────────────────────────────────────────
+    BusinessProfile:
+      type: object
+      required: [id, businessName, slug]
+      properties:
+        id:
+          type: integer
+        businessName:
+          type: string
+        slug:
+          type: string
+        description:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+        coverImageUrl:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+        zip:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        googleMapsUrl:
+          type: ["string", "null"]
+        googlePlaceId:
+          type: ["string", "null"]
+        primaryColor:
+          type: ["string", "null"]
+        secondaryColor:
+          type: ["string", "null"]
+        facebookUrl:
+          type: ["string", "null"]
+        instagramUrl:
+          type: ["string", "null"]
+        twitterUrl:
+          type: ["string", "null"]
+        linkedinUrl:
+          type: ["string", "null"]
+        businessHours:
+          type: ["string", "null"]
+        pageViews:
+          type: integer
+        reviewClicks:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    BusinessProfileInput:
+      type: object
+      required: [businessName]
+      properties:
+        businessName:
+          type: string
+        description:
+          type: string
+        logoUrl:
+          type: string
+        coverImageUrl:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zip:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        googleMapsUrl:
+          type: string
+        googlePlaceId:
+          type: string
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+        facebookUrl:
+          type: string
+        instagramUrl:
+          type: string
+        twitterUrl:
+          type: string
+        linkedinUrl:
+          type: string
+        businessHours:
+          type: string
+
+    BusinessService:
+      type: object
+      required: [id, name, isActive, displayOrder]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        price:
+          type: ["string", "null"]
+        duration:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        displayOrder:
+          type: integer
+
+    BusinessServiceInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: string
+        duration:
+          type: string
+        isActive:
+          type: boolean
+        displayOrder:
+          type: integer
+
+    DashboardStats:
+      type: object
+      required: [totalReviews, averageRating, ratingDistribution, recentReviews, requestFunnel, totalRequests]
+      properties:
+        totalReviews:
+          type: integer
+        averageRating:
+          type: number
+        ratingDistribution:
+          type: array
+          items:
+            type: object
+            required: [rating, count]
+            properties:
+              rating:
+                type: integer
+              count:
+                type: integer
+        recentReviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/Review"
+        requestFunnel:
+          type: object
+          required: [pending, sent, opened, completed]
+          properties:
+            pending:
+              type: integer
+            sent:
+              type: integer
+            opened:
+              type: integer
+            completed:
+              type: integer
+        totalRequests:
+          type: integer
+        positiveReviews:
+          type: integer
+        negativeReviews:
+          type: integer
+
+    # ── Review Requests ───────────────────────────────────────────────────────
+    ReviewRequest:
+      type: object
+      required: [id, customerName, uniqueToken, status, createdAt]
+      properties:
+        id:
+          type: integer
+        customerName:
+          type: string
+        customerEmail:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+        uniqueToken:
+          type: string
+        status:
+          type: string
+          enum: [pending, sent, opened, completed]
+        notes:
+          type: ["string", "null"]
+        sendMethod:
+          type: ["string", "null"]
+        sentAt:
+          type: ["string", "null"]
+        openedAt:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    ReviewRequestInput:
+      type: object
+      required: [customerName]
+      properties:
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+        customerPhone:
+          type: string
+        notes:
+          type: string
+
+    ReviewRequestUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, sent, opened, completed]
+        notes:
+          type: string
+
+    BulkImportInput:
+      type: object
+      required: [rows]
+      properties:
+        rows:
+          type: array
+          items:
+            type: object
+            required: [customerName]
+            properties:
+              customerName:
+                type: string
+              customerEmail:
+                type: string
+              customerPhone:
+                type: string
+
+    BulkImportResult:
+      type: object
+      required: [imported, skipped]
+      properties:
+        imported:
+          type: integer
+        skipped:
+          type: integer
+
+    SendEmailResult:
+      type: object
+      required: [sent]
+      properties:
+        sent:
+          type: boolean
+        message:
+          type: string
+
+    # ── Analytics ─────────────────────────────────────────────────────────────
+    AnalyticsData:
+      type: object
+      required: [pageViews, reviewClicks, conversionRate, slug]
+      properties:
+        pageViews:
+          type: integer
+        reviewClicks:
+          type: integer
+        conversionRate:
+          type: number
+        slug:
+          type: ["string", "null"]
+        publicUrl:
+          type: ["string", "null"]
+
+    # ── Reports ───────────────────────────────────────────────────────────────
+    ReportsData:
+      type: object
+      required: [totalReviews, averageRating, positiveCount, neutralCount, negativeCount, last7DaysCount, ratingDistribution]
+      properties:
+        totalReviews:
+          type: integer
+        averageRating:
+          type: number
+        positiveCount:
+          type: integer
+        neutralCount:
+          type: integer
+        negativeCount:
+          type: integer
+        last7DaysCount:
+          type: integer
+        ratingDistribution:
+          type: array
+          items:
+            type: object
+            required: [rating, count]
+            properties:
+              rating:
+                type: integer
+              count:
+                type: integer
+        topAuthors:
+          type: array
+          items:
+            type: object
+            required: [author, count]
+            properties:
+              author:
+                type: string
+              count:
+                type: integer
+
+    # ── Settings ──────────────────────────────────────────────────────────────
+    UserSettings:
+      type: object
+      required: [emailNotifications, smsNotifications, pushNotifications, marketingEmails]
+      properties:
+        emailNotifications:
+          type: boolean
+        smsNotifications:
+          type: boolean
+        pushNotifications:
+          type: boolean
+        marketingEmails:
+          type: boolean
+
+    UserSettingsInput:
+      type: object
+      properties:
+        emailNotifications:
+          type: boolean
+        smsNotifications:
+          type: boolean
+        pushNotifications:
+          type: boolean
+        marketingEmails:
+          type: boolean
+
+    # ── Public ────────────────────────────────────────────────────────────────
+    PublicBusinessData:
+      type: object
+      required: [businessName, slug]
+      properties:
+        businessName:
+          type: string
+        slug:
+          type: string
+        description:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+        coverImageUrl:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        primaryColor:
+          type: ["string", "null"]
+        secondaryColor:
+          type: ["string", "null"]
+        facebookUrl:
+          type: ["string", "null"]
+        instagramUrl:
+          type: ["string", "null"]
+        twitterUrl:
+          type: ["string", "null"]
+        linkedinUrl:
+          type: ["string", "null"]
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/BusinessService"
+        recentReviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/Review"
+        totalReviews:
+          type: integer
+        averageRating:
+          type: number
+        googleMapsUrl:
+          type: ["string", "null"]
+
+    ReviewCollectionData:
+      type: object
+      required: [businessName, googleReviewUrl]
+      properties:
+        businessName:
+          type: string
+        logoUrl:
+          type: ["string", "null"]
+        primaryColor:
+          type: ["string", "null"]
+        googleReviewUrl:
+          type: string
+        customerName:
+          type: ["string", "null"]
+        personalized:
+          type: boolean

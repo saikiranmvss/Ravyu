@@ -1,0 +1,101 @@
+Project name: Ravyu — Google Business / review CRM (“Business Hub”)
+
+Goal: Rebuild a production-quality web app that includes every capability below. Do not skip “secondary” screens (settings, campaigns UI, etc.); either implement them with real persistence or clearly scope them in the spec and implement minimal viable versions with the same routes. Prefer one consistent stack (e.g. React + TypeScript frontend, REST or tRPC API, PostgreSQL or MySQL, object storage for images if not using base64). Do not use static mock data for core CRM flows where real data exists in the spec.
+
+1. Product summary
+A SaaS for local businesses to: import/scrape Google Maps reviews, manage and reply to reviews (with AI), generate social posts from reviews or custom prompts, manage a business profile with a public landing page, run review-request campaigns (per-customer links, bulk CSV, optional email), and view analytics (landing page views, review CTA clicks, conversion). Support email/password and Google (Firebase) sign-in, with profile onboarding for new users.
+
+2. User roles and access
+Guest: marketing landing, login/signup, public business pages.
+Authenticated user: full app; data scoped by user_id.
+No admin panel required unless you add a simple “super admin” later—out of scope unless specified.
+3. Routes (match or equivalent)
+/ — Marketing landing: brand, value props (review management, CRM, analytics), CTA to login.
+/login, /signup — Auth forms; support email/password + Sign in with Google (Firebase).
+/onboarding or /profile_complete — Multi-step wizard if profile incomplete (see §5).
+/dashboard — KPIs and customer/review list with search (data from real stored reviews, not static JSON).
+/reviews — Scrape controls, list of reviews, AI generate reply, AI generate social image from a review; persist reviews in DB; optional client cache only for UX, not primary source of truth.
+/ai-generator — Two modes: (A) custom prompt → text or image post; (B) paste review → image post. Platforms: Instagram, Facebook, Twitter/X, LinkedIn, Google Business. Tones: professional, casual, enthusiastic, formal, humorous. Copy + download image.
+/business/profile — Create/edit business: name, description, logo (prefer file upload to storage + URL, not huge base64 in DB), cover image URL, contact, address, Google Maps URL, Google Place ID, brand primary/secondary colors, social links (Facebook, Instagram, Twitter, LinkedIn), business hours (structured or JSON text).
+/business/requests — Review requests: create row (name, email, phone, notes), CSV bulk import (columns: name, email, phone), filter by status, copy shareable link {origin}/review/{slug}/{token}, send email per request.
+/reports — Stats from stored reviews plus optional fresh scrape job for reporting (user chooses count cap, e.g. 1–500). Export summary as CSV from UI.
+/analytics — Landing metrics: page views, review button clicks, conversion %, link to public page /b/{slug}.
+/settings — Tabs: General (business/contact prefs), Notifications (email/SMS toggles – persist), Privacy, Billing placeholder with persistence for toggles that matter (at minimum notification prefs in DB).
+/profile — Edit username, phone, company; change password; delete account with confirmation modal.
+/view-profile — Read-only profile including onboarding fields.
+Public (no auth):
+/b/:slug — Business landing: hero, branding, services, recent reviews, stats, track page view (POST), track review CTA click (POST).
+/review/:slug — Review collection page: resolves Google review URL from Place ID or Maps URL.
+/review/:slug/:token — Opens tracked link: mark request “opened”, then show collection page with personalized copy.
+Navigation: Sidebar: Dashboard, Reviews, AI Generator, Business, Requests, Reports; footer or secondary: Analytics, Settings. Include routes for Campaigns and Competitors in nav only if you implement them with DB backing; otherwise omit routes or implement as real minimal CRUD (not hardcoded arrays).
+
+4. Authentication and security
+JWT: short-lived access token + refresh token; secure storage; refresh endpoint; logout revokes refresh token.
+Email/password: signup (email, password, username), login, password change (current + new).
+Firebase Google: frontend Firebase Auth; backend verifies Firebase ID tokens properly (signature + issuer + audience—do not decode without verification).
+New Google user: After Google sign-in, require password once if they need email/password login later; store hashed password server-side.
+Authorization: All private API routes require valid access token; user_id from token only.
+5. Onboarding wizard (after signup)
+Steps (example): (1) Name, phone, company validation; (2) Business type: single / multiple / franchise / agency; (3) Industry: restaurant, healthcare, hospitality, retail, real estate, professional, education, other; (4) Challenges: multi-select (more reviews, time/resources, monitoring, negative reviews, ratings, trends, other). Persist on user record; set profile_complete when required fields filled. Redirect incomplete users to onboarding until done.
+
+6. Data model (minimum entities)
+User: id, email, username, password_hash (nullable if OAuth-only), phone, company, google_maps_url (user-level optional), business_type, industry, challenges (JSON array), profile_complete, firebase_uid / google_id optional, timestamps.
+RefreshToken: token, user_id, expires_at.
+Session (optional): user_id, session_token, ip, user_agent, expires_at.
+Review: user_id, author, rating 1–5, text, date string, source_url, created_at.
+BusinessProfile: user_id (unique), business_name, slug (unique), description, logo_url, cover_image_url, contacts, address fields, google_maps_url, google_place_id, business_hours, socials, primary_color, secondary_color, page_views, review_clicks, is_active, timestamps.
+BusinessService: business_id, name, description, price, duration, is_active, display_order.
+ReviewRequest: business_id, customer_name, customer_email, customer_phone, unique_token (unique), status enum pending|sent|opened|completed, sent_at, opened_at, completed_at, send_method, notes, created_at.
+Settings (user or business): notification email/SMS/push flags, etc.
+Cascade delete: Deleting a user removes related reviews, tokens, business profile, services, review requests.
+
+7. Backend API (implement all; OpenAPI docs appreciated)
+Auth: POST /auth/signup, POST /auth/login, POST /auth/logout, POST /auth/refresh, POST /auth/firebase, POST /auth/firebase/check.
+
+User: GET/PUT /user/profile, PUT /user/change-password, DELETE /user/delete.
+
+Reviews: POST /reviews/scrape (body: maps URL, max_reviews cap), GET /reviews (current user’s stored reviews).
+
+AI (authenticated):
+
+POST /review-ai/generate-reply — input: review_text, rating, author, business_name optional. Output: reply text + sentiment metadata.
+POST /review-ai/generate-post — from review → image (and caption); brand colors.
+POST /review-ai/generate-content — custom prompt; content_type text|image; platform, tone; returns text or image+caption.
+Use one documented AI setup: e.g. OpenAI for text replies + image API per your stack; document required env vars (OPENAI_API_KEY, etc.). Handle rate limits gracefully.
+
+Business (authenticated):
+POST/GET/PUT /business/profile, CRUD /business/services, review-requests create/bulk/list/status/update, POST .../review-requests/{id}/send-email (SMTP: HTML email with CTA; idempotent if already sent), GET /business/dashboard/stats (totals, avg rating, rating distribution, request funnel, latest reviews).
+
+Business (public):
+GET /business/public/{slug}, GET /business/public/{slug}/review-collection, GET /business/public/review/{slug}/{token}, POST .../track-view, POST .../track-review-click.
+
+Analytics (authenticated): GET /business/analytics — page_views, review_clicks, conversion_rate, slug.
+
+Reports:
+GET /business/reports/stats — from stored reviews (totals, positive/negative/neutral, avg, last 7 days where applicable; response_rate placeholder OK if not tracked).
+POST /business/reports/scrape-stats — optional fresh scrape for reporting (same external scraper as scrape endpoint).
+
+Health: GET /health (DB check).
+
+8. External integrations
+Google Maps review scraping: Apify actor or equivalent (APIFY_TOKEN), validate Maps URL domains, cap max reviews server-side.
+Email: SMTP for review-request emails; env vars SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD; HTML template with business branding.
+CORS: Allow frontend origin in production.
+9. Frontend UX requirements
+Responsive layout: sidebar + header with user menu and logout; mobile drawer for sidebar.
+Toasts for success/error (e.g. react-toastify or equivalent).
+Loading and empty states on all main pages.
+Public landing pages styled with business primary/secondary CSS variables.
+Accessibility: semantic headings, focus states, sufficient contrast.
+10. Non-functional requirements
+Environment-based config (no secrets in client except public Firebase config).
+Input validation on API (Pydantic/Zod/etc.).
+Rate limiting on AI and scrape endpoints if easy.
+README: env vars, local run, deploy notes.
+11. Explicit fixes vs. the legacy app
+Dashboard must use GET /reviews or /business/dashboard/stats, not hardcoded sample JSON.
+Firebase tokens must be verified on the server.
+Prefer uploaded logo URLs over storing multi‑MB base64 in the database.
+Avoid duplicate mounting of the same API routes.
+Implement Settings persistence or reduce scope and document—do not leave purely fake toggles without stating “demo.”
+Deliverable: A deployable monorepo or split frontend/backend with the above fully working end-to-end, seed script optional, and a short feature checklist in README mapping each § above to “done.”
