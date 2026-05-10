@@ -1,10 +1,10 @@
-import { pgTable, serial, text, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { mysqlTable, int, text, boolean, timestamp, json, varchar } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const usersTable = pgTable("users", {
-  id: serial("id").primaryKey(),
-  email: text("email").notNull().unique(),
+export const usersTable = mysqlTable("users", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
   username: text("username").notNull(),
   passwordHash: text("password_hash"),
   phone: text("phone"),
@@ -14,8 +14,8 @@ export const usersTable = pgTable("users", {
   industry: text("industry"),
   challenges: json("challenges").$type<string[]>(),
   profileComplete: boolean("profile_complete").notNull().default(false),
-  firebaseUid: text("firebase_uid").unique(),
-  googleId: text("google_id").unique(),
+  firebaseUid: varchar("firebase_uid", { length: 255 }).unique(),
+  googleId: varchar("google_id", { length: 255 }).unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

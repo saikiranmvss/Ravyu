@@ -9,7 +9,12 @@ const router = Router();
 async function ensureSettings(userId: number) {
   const [existing] = await db.select().from(userSettingsTable).where(eq(userSettingsTable.userId, userId)).limit(1);
   if (existing) return existing;
-  const [created] = await db.insert(userSettingsTable).values({ userId }).returning();
+  const inserted = await db.insert(userSettingsTable).values({ userId }).$returningId();
+  const [created] = await db
+    .select()
+    .from(userSettingsTable)
+    .where(eq(userSettingsTable.id, inserted[0]!.id))
+    .limit(1);
   return created;
 }
 
@@ -27,11 +32,15 @@ router.put("/", requireAuth, async (req: AuthRequest, res) => {
   const parse = UpdateSettingsBody.safeParse(req.body);
   if (!parse.success) { res.status(400).json({ error: "Validation error" }); return; }
   await ensureSettings(req.userId!);
-  const [updated] = await db
+  await db
     .update(userSettingsTable)
     .set({ ...parse.data, updatedAt: new Date() })
+    .where(eq(userSettingsTable.userId, req.userId!));
+  const [updated] = await db
+    .select()
+    .from(userSettingsTable)
     .where(eq(userSettingsTable.userId, req.userId!))
-    .returning();
+    .limit(1);
   res.json({
     emailNotifications: updated.emailNotifications,
     smsNotifications: updated.smsNotifications,

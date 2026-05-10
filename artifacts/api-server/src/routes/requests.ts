@@ -70,10 +70,15 @@ router.post("/requests", requireAuth, async (req: AuthRequest, res) => {
   const profile = await getBusinessForUser(req.userId!);
   if (!profile) { res.status(400).json({ error: "Create a business profile first" }); return; }
   const uniqueToken = generateToken();
-  const [request] = await db
+  const inserted = await db
     .insert(reviewRequestsTable)
     .values({ ...parse.data, businessId: profile.id, uniqueToken })
-    .returning();
+    .$returningId();
+  const [request] = await db
+    .select()
+    .from(reviewRequestsTable)
+    .where(eq(reviewRequestsTable.id, inserted[0]!.id))
+    .limit(1);
   res.status(201).json(formatRequest(request));
 });
 
@@ -99,11 +104,15 @@ router.put("/requests/:id", requireAuth, async (req: AuthRequest, res) => {
   if (!paramsCheck.success || !parse.success) { res.status(400).json({ error: "Validation error" }); return; }
   const profile = await getBusinessForUser(req.userId!);
   if (!profile) { res.status(404).json({ error: "No business profile" }); return; }
-  const [request] = await db
+  await db
     .update(reviewRequestsTable)
     .set(parse.data)
+    .where(and(eq(reviewRequestsTable.id, paramsCheck.data.id), eq(reviewRequestsTable.businessId, profile.id)));
+  const [request] = await db
+    .select()
+    .from(reviewRequestsTable)
     .where(and(eq(reviewRequestsTable.id, paramsCheck.data.id), eq(reviewRequestsTable.businessId, profile.id)))
-    .returning();
+    .limit(1);
   if (!request) { res.status(404).json({ error: "Request not found" }); return; }
   res.json(formatRequest(request));
 });

@@ -1,11 +1,11 @@
-import { pgTable, serial, integer, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { mysqlTable, int, text, boolean, timestamp, varchar } from "drizzle-orm/mysql-core";
 import { usersTable } from "./users";
 
-export const businessProfilesTable = pgTable("business_profiles", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().unique().references(() => usersTable.id, { onDelete: "cascade" }),
+export const businessProfilesTable = mysqlTable("business_profiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull().unique().references(() => usersTable.id, { onDelete: "cascade" }),
   businessName: text("business_name").notNull(),
-  slug: text("slug").notNull().unique(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
   description: text("description"),
   logoUrl: text("logo_url"),
   coverImageUrl: text("cover_image_url"),
@@ -25,8 +25,8 @@ export const businessProfilesTable = pgTable("business_profiles", {
   twitterUrl: text("twitter_url"),
   linkedinUrl: text("linkedin_url"),
   businessHours: text("business_hours"),
-  pageViews: integer("page_views").notNull().default(0),
-  reviewClicks: integer("review_clicks").notNull().default(0),
+  pageViews: int("page_views").notNull().default(0),
+  reviewClicks: int("review_clicks").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

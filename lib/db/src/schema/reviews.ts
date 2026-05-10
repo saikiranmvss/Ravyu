@@ -1,11 +1,11 @@
-import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
+import { mysqlTable, int, text, timestamp } from "drizzle-orm/mysql-core";
 import { usersTable } from "./users";
 
-export const reviewsTable = pgTable("reviews", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+export const reviewsTable = mysqlTable("reviews", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   author: text("author").notNull(),
-  rating: integer("rating").notNull(),
+  rating: int("rating").notNull(),
   text: text("text").notNull().default(""),
   date: text("date").notNull().default(""),
   sourceUrl: text("source_url"),

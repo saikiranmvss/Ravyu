@@ -31,11 +31,11 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res) => {
 router.put("/profile", requireAuth, async (req: AuthRequest, res) => {
   const parse = UpdateUserProfileBody.safeParse(req.body);
   if (!parse.success) { res.status(400).json({ error: "Validation error" }); return; }
-  const [user] = await db
+  await db
     .update(usersTable)
     .set({ ...parse.data, updatedAt: new Date() })
-    .where(eq(usersTable.id, req.userId!))
-    .returning();
+    .where(eq(usersTable.id, req.userId!));
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
   res.json(formatUser(user));
 });
 
@@ -43,11 +43,11 @@ router.put("/onboarding", requireAuth, async (req: AuthRequest, res) => {
   const parse = CompleteOnboardingBody.safeParse(req.body);
   if (!parse.success) { res.status(400).json({ error: "Validation error", details: parse.error.issues }); return; }
   const { phone, company, businessType, industry, challenges } = parse.data;
-  const [user] = await db
+  await db
     .update(usersTable)
     .set({ phone, company, businessType, industry, challenges, profileComplete: true, updatedAt: new Date() })
-    .where(eq(usersTable.id, req.userId!))
-    .returning();
+    .where(eq(usersTable.id, req.userId!));
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
   res.json(formatUser(user));
 });
 

@@ -1,10 +1,10 @@
-import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { mysqlTable, int, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 import { usersTable } from "./users";
 
-export const refreshTokensTable = pgTable("refresh_tokens", {
-  id: serial("id").primaryKey(),
-  token: text("token").notNull().unique(),
-  userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+export const refreshTokensTable = mysqlTable("refresh_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 512 }).notNull().unique(),
+  userId: int("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

@@ -51,7 +51,8 @@ router.post("/signup", async (req, res) => {
     return;
   }
   const passwordHash = await hashPassword(password);
-  const [user] = await db.insert(usersTable).values({ email, username, passwordHash }).returning();
+  const inserted = await db.insert(usersTable).values({ email, username, passwordHash }).$returningId();
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, inserted[0]!.id)).limit(1);
   const accessToken = signAccessToken(user.id);
   const refreshToken = signRefreshToken(user.id);
   await storeRefreshToken(user.id, refreshToken);
@@ -144,10 +145,11 @@ router.post("/firebase", async (req, res) => {
   if (!user) {
     isNewUser = true;
     const name = firebasePayload.name ?? email.split("@")[0];
-    [user] = await db
+    const inserted = await db
       .insert(usersTable)
       .values({ email, username: name, firebaseUid, googleId: firebaseUid })
-      .returning();
+      .$returningId();
+    [user] = await db.select().from(usersTable).where(eq(usersTable.id, inserted[0]!.id)).limit(1);
   } else if (!user.firebaseUid) {
     await db.update(usersTable).set({ firebaseUid, googleId: firebaseUid }).where(eq(usersTable.id, user.id));
     user = { ...user, firebaseUid, googleId: firebaseUid };

@@ -88,21 +88,30 @@ router.post("/profile", requireAuth, async (req: AuthRequest, res) => {
   const slugConflict = await db.select().from(businessProfilesTable).where(eq(businessProfilesTable.slug, slug)).limit(1);
   if (slugConflict.length > 0) slug = `${slug}-${Date.now()}`;
 
-  const [profile] = await db
+  const inserted = await db
     .insert(businessProfilesTable)
     .values({ ...parse.data, userId: req.userId!, slug })
-    .returning();
+    .$returningId();
+  const [profile] = await db
+    .select()
+    .from(businessProfilesTable)
+    .where(eq(businessProfilesTable.id, inserted[0]!.id))
+    .limit(1);
   res.status(201).json(profile);
 });
 
 router.put("/profile", requireAuth, async (req: AuthRequest, res) => {
   const parse = UpdateBusinessProfileBody.safeParse(req.body);
   if (!parse.success) { res.status(400).json({ error: "Validation error" }); return; }
-  const [profile] = await db
+  await db
     .update(businessProfilesTable)
     .set({ ...parse.data, updatedAt: new Date() })
+    .where(eq(businessProfilesTable.userId, req.userId!));
+  const [profile] = await db
+    .select()
+    .from(businessProfilesTable)
     .where(eq(businessProfilesTable.userId, req.userId!))
-    .returning();
+    .limit(1);
   if (!profile) { res.status(404).json({ error: "No business profile" }); return; }
   res.json(profile);
 });
@@ -120,7 +129,15 @@ router.post("/services", requireAuth, async (req: AuthRequest, res) => {
   if (!parse.success) { res.status(400).json({ error: "Validation error" }); return; }
   const [profile] = await db.select().from(businessProfilesTable).where(eq(businessProfilesTable.userId, req.userId!)).limit(1);
   if (!profile) { res.status(400).json({ error: "Create a business profile first" }); return; }
-  const [service] = await db.insert(businessServicesTable).values({ ...parse.data, businessId: profile.id }).returning();
+  const inserted = await db
+    .insert(businessServicesTable)
+    .values({ ...parse.data, businessId: profile.id })
+    .$returningId();
+  const [service] = await db
+    .select()
+    .from(businessServicesTable)
+    .where(eq(businessServicesTable.id, inserted[0]!.id))
+    .limit(1);
   res.status(201).json(service);
 });
 
@@ -130,11 +147,15 @@ router.put("/services/:id", requireAuth, async (req: AuthRequest, res) => {
   if (!paramsCheck.success || !parse.success) { res.status(400).json({ error: "Validation error" }); return; }
   const [profile] = await db.select().from(businessProfilesTable).where(eq(businessProfilesTable.userId, req.userId!)).limit(1);
   if (!profile) { res.status(404).json({ error: "No business profile" }); return; }
-  const [service] = await db
+  await db
     .update(businessServicesTable)
     .set(parse.data)
+    .where(and(eq(businessServicesTable.id, paramsCheck.data.id), eq(businessServicesTable.businessId, profile.id)));
+  const [service] = await db
+    .select()
+    .from(businessServicesTable)
     .where(and(eq(businessServicesTable.id, paramsCheck.data.id), eq(businessServicesTable.businessId, profile.id)))
-    .returning();
+    .limit(1);
   if (!service) { res.status(404).json({ error: "Service not found" }); return; }
   res.json(service);
 });
