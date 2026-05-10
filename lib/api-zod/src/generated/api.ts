@@ -155,6 +155,7 @@ export const CompleteOnboardingBody = zod.object({
     "restaurant",
     "healthcare",
     "hospitality",
+    "travel",
     "retail",
     "real_estate",
     "professional",
@@ -526,6 +527,7 @@ export const GetDashboardStatsResponse = zod.object({
   totalRequests: zod.number(),
   positiveReviews: zod.number().optional(),
   negativeReviews: zod.number().optional(),
+  actionSuggestions: zod.array(zod.string()).optional(),
 });
 
 /**
@@ -655,13 +657,101 @@ export const GetReportsResponse = zod.object({
       count: zod.number(),
     }),
   ),
-  topAuthors: zod
-    .array(
+});
+
+/**
+ * @summary Get industry profile configuration
+ */
+export const GetIndustryProfileResponse = zod.object({
+  businessId: zod.number(),
+  industry: zod.string(),
+  subIndustry: zod.string().nullish(),
+  riskSensitiveMode: zod.boolean(),
+  multiOutlet: zod.boolean(),
+});
+
+/**
+ * @summary Update industry profile configuration
+ */
+export const UpdateIndustryProfileBody = zod.object({
+  industry: zod.string().optional(),
+  subIndustry: zod.string().optional(),
+  riskSensitiveMode: zod.boolean().optional(),
+  multiOutlet: zod.boolean().optional(),
+});
+
+export const UpdateIndustryProfileResponse = zod.object({
+  businessId: zod.number(),
+  industry: zod.string(),
+  subIndustry: zod.string().nullish(),
+  riskSensitiveMode: zod.boolean(),
+  multiOutlet: zod.boolean(),
+});
+
+/**
+ * @summary Get industry specific intelligence report
+ */
+export const GetIndustryReportsQueryParams = zod.object({
+  window: zod
+    .union([zod.literal(7), zod.literal(30), zod.literal(90)])
+    .optional(),
+});
+
+export const GetIndustryReportsResponse = zod.object({
+  industry: zod.string(),
+  topPraisedItems: zod.array(
+    zod.object({
+      name: zod.string(),
+      pos: zod.number(),
+      neg: zod.number(),
+    }),
+  ),
+  topComplainedItems: zod.array(
+    zod.object({
+      name: zod.string(),
+      pos: zod.number(),
+      neg: zod.number(),
+    }),
+  ),
+  mixedItems: zod.array(
+    zod.object({
+      name: zod.string(),
+      pos: zod.number(),
+      neg: zod.number(),
+    }),
+  ),
+  aspectBreakdown: zod.array(
+    zod.object({
+      aspect: zod.string(),
+      positive: zod.number(),
+      neutral: zod.number(),
+      negative: zod.number(),
+    }),
+  ),
+  trend: zod.object({
+    positive: zod.number(),
+    neutral: zod.number(),
+    negative: zod.number(),
+  }),
+  actionSuggestions: zod.array(zod.string()),
+  riskAlerts: zod.array(
+    zod.object({
+      aspect: zod.string(),
+      reason: zod.string().nullish(),
+      severity: zod.string(),
+    }),
+  ),
+  weeklyReport: zod
+    .union([
       zod.object({
-        author: zod.string(),
-        count: zod.number(),
+        summary: zod.string(),
+        topWins: zod.array(zod.string()),
+        attentionAreas: zod.array(zod.string()),
+        recommendedAction: zod.string(),
+        createdAt: zod.coerce.date(),
       }),
-    )
+      zod.null(),
+    ])
     .optional(),
 });
 
@@ -798,4 +888,30 @@ export const GetTrackedReviewLinkResponse = zod.object({
   googleReviewUrl: zod.string(),
   customerName: zod.string().nullish(),
   personalized: zod.boolean().optional(),
+});
+
+/**
+ * @summary Get industry pricing plans
+ */
+export const GetPricingPlansResponse = zod.object({
+  plans: zod.array(
+    zod.object({
+      industry: zod.string(),
+      tiers: zod.array(
+        zod.object({
+          name: zod.string(),
+          monthlyInr: zod.number().nullish(),
+          features: zod.array(zod.string()),
+        }),
+      ),
+    }),
+  ),
+  topAuthors: zod
+    .array(
+      zod.object({
+        author: zod.string(),
+        count: zod.number(),
+      }),
+    )
+    .optional(),
 });

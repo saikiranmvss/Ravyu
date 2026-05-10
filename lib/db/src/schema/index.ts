@@ -5,3 +5,6 @@ export * from "./business_profiles";
 export * from "./business_services";
 export * from "./review_requests";
 export * from "./user_settings";
+export * from "./industry_profiles";
+export * from "./review_insights";
+export * from "./weekly_reports";

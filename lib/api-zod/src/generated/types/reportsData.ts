@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ReportsDataRatingDistributionItem } from "./reportsDataRatingDistributionItem";
-import type { ReportsDataTopAuthorsItem } from "./reportsDataTopAuthorsItem";
 
 export interface ReportsData {
   totalReviews: number;
@@ -16,5 +15,4 @@ export interface ReportsData {
   negativeCount: number;
   last7DaysCount: number;
   ratingDistribution: ReportsDataRatingDistributionItem[];
-  topAuthors?: ReportsDataTopAuthorsItem[];
 }

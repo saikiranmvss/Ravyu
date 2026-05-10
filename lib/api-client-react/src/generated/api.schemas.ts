@@ -86,6 +86,7 @@ export const OnboardingInputIndustry = {
   restaurant: "restaurant",
   healthcare: "healthcare",
   hospitality: "hospitality",
+  travel: "travel",
   retail: "retail",
   real_estate: "real_estate",
   professional: "professional",
@@ -369,6 +370,7 @@ export interface DashboardStats {
   totalRequests: number;
   positiveReviews?: number;
   negativeReviews?: number;
+  actionSuggestions?: string[];
 }
 
 export type ReviewRequestStatus =
@@ -460,11 +462,6 @@ export type ReportsDataRatingDistributionItem = {
   count: number;
 };
 
-export type ReportsDataTopAuthorsItem = {
-  author: string;
-  count: number;
-};
-
 export interface ReportsData {
   totalReviews: number;
   averageRating: number;
@@ -473,7 +470,102 @@ export interface ReportsData {
   negativeCount: number;
   last7DaysCount: number;
   ratingDistribution: ReportsDataRatingDistributionItem[];
-  topAuthors?: ReportsDataTopAuthorsItem[];
+}
+
+export interface IndustryProfile {
+  businessId: number;
+  industry: string;
+  /** @nullable */
+  subIndustry?: string | null;
+  riskSensitiveMode: boolean;
+  multiOutlet: boolean;
+}
+
+export interface IndustryProfileInput {
+  industry?: string;
+  subIndustry?: string;
+  riskSensitiveMode?: boolean;
+  multiOutlet?: boolean;
+}
+
+export interface WeeklyReport {
+  summary: string;
+  topWins: string[];
+  attentionAreas: string[];
+  recommendedAction: string;
+  createdAt: string;
+}
+
+export type IndustryReportsDataTopPraisedItemsItem = {
+  name: string;
+  pos: number;
+  neg: number;
+};
+
+export type IndustryReportsDataTopComplainedItemsItem = {
+  name: string;
+  pos: number;
+  neg: number;
+};
+
+export type IndustryReportsDataMixedItemsItem = {
+  name: string;
+  pos: number;
+  neg: number;
+};
+
+export type IndustryReportsDataAspectBreakdownItem = {
+  aspect: string;
+  positive: number;
+  neutral: number;
+  negative: number;
+};
+
+export type IndustryReportsDataTrend = {
+  positive: number;
+  neutral: number;
+  negative: number;
+};
+
+export type IndustryReportsDataRiskAlertsItem = {
+  aspect: string;
+  /** @nullable */
+  reason?: string | null;
+  severity: string;
+};
+
+export interface IndustryReportsData {
+  industry: string;
+  topPraisedItems: IndustryReportsDataTopPraisedItemsItem[];
+  topComplainedItems: IndustryReportsDataTopComplainedItemsItem[];
+  mixedItems: IndustryReportsDataMixedItemsItem[];
+  aspectBreakdown: IndustryReportsDataAspectBreakdownItem[];
+  trend: IndustryReportsDataTrend;
+  actionSuggestions: string[];
+  riskAlerts: IndustryReportsDataRiskAlertsItem[];
+  weeklyReport?: WeeklyReport | null;
+}
+
+export type PricingPlansDataPlansItemTiersItem = {
+  name: string;
+  /** @nullable */
+  monthlyInr?: number | null;
+  features: string[];
+};
+
+export type PricingPlansDataPlansItem = {
+  industry: string;
+  tiers: PricingPlansDataPlansItemTiersItem[];
+};
+
+export type PricingPlansDataTopAuthorsItem = {
+  author: string;
+  count: number;
+};
+
+export interface PricingPlansData {
+  plans: PricingPlansDataPlansItem[];
+  topAuthors?: PricingPlansDataTopAuthorsItem[];
 }
 
 export interface UserSettings {
@@ -563,4 +655,17 @@ export const GetReviewRequestsStatus = {
   sent: "sent",
   opened: "opened",
   completed: "completed",
+} as const;
+
+export type GetIndustryReportsParams = {
+  window?: GetIndustryReportsWindow;
+};
+
+export type GetIndustryReportsWindow =
+  (typeof GetIndustryReportsWindow)[keyof typeof GetIndustryReportsWindow];
+
+export const GetIndustryReportsWindow = {
+  NUMBER_7: 7,
+  NUMBER_30: 30,
+  NUMBER_90: 90,
 } as const;

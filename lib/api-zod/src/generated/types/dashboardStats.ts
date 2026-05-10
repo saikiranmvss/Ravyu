@@ -18,4 +18,5 @@ export interface DashboardStats {
   totalRequests: number;
   positiveReviews?: number;
   negativeReviews?: number;
+  actionSuggestions?: string[];
 }

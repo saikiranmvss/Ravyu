@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { GenerateReplyBody, GeneratePostBody, GenerateContentBody } from "@workspace/api-zod";
 import { requireAuth, type AuthRequest } from "../lib/auth";
+import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { normalizeIndustry } from "../lib/feature-flags";
+import { extractInsightsFromReview } from "../lib/industry-intelligence";
 
 const router = Router();
 
@@ -44,12 +48,18 @@ router.post("/generate-reply", requireAuth, async (req: AuthRequest, res) => {
   const parse = GenerateReplyBody.safeParse(req.body);
   if (!parse.success) { res.status(400).json({ error: "Validation error" }); return; }
   const { reviewText, rating, author, businessName, tone } = parse.data;
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+  const industry = normalizeIndustry(user?.industry);
+  const insights = extractInsightsFromReview(reviewText, industry);
+  const topInsight = insights[0];
 
-  const systemPrompt = `You are a professional business reputation manager. Generate a concise, genuine response to a customer review. ${toneInstruction(tone ?? "professional")} Keep responses under 150 words. Do not include placeholders like [Business Name] — use the actual name if provided.`;
+  const systemPrompt = `You are a professional business reputation manager. Generate a concise, genuine response to a customer review. ${toneInstruction(tone ?? "professional")} Keep responses under 150 words. Do not include placeholders like [Business Name] — use the actual name if provided. Add context-aware acknowledgment when a specific issue or praised area is mentioned.`;
   const userPrompt = `Business: ${businessName ?? "our business"}
 Customer: ${author ?? "Valued Customer"}
 Rating: ${rating}/5
 Review: "${reviewText}"
+Industry: ${industry}
+Primary detected aspect: ${topInsight?.aspect ?? "general"}${topInsight?.entityName ? ` (${topInsight.entityName})` : ""}
 
 Write a reply to this review.`;
 

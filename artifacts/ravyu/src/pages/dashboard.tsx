@@ -29,6 +29,7 @@ export default function DashboardPage() {
   });
 
   const funnel = stats?.requestFunnel;
+  const actionSuggestions = (stats as { actionSuggestions?: string[] } | undefined)?.actionSuggestions ?? [];
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
@@ -60,6 +61,19 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      {actionSuggestions.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">AI Action Suggestions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {actionSuggestions.slice(0, 3).map((s, idx) => (
+              <div key={idx} className="rounded-md border p-3 text-sm">{s}</div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Rating distribution */}

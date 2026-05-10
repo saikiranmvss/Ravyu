@@ -17,7 +17,7 @@ const BUSINESS_TYPES = [
 ];
 
 const INDUSTRIES = [
-  "restaurant", "healthcare", "hospitality", "retail", "real_estate", "professional", "education", "other",
+  "restaurant", "healthcare", "hospitality", "travel", "retail", "real_estate", "professional", "education", "other",
 ];
 
 const CHALLENGES = [
@@ -51,7 +51,7 @@ export default function OnboardingPage() {
       return;
     }
     mutation.mutate(
-      { data: { phone, company, businessType: businessType as "single" | "multiple" | "franchise" | "agency", industry: industry as "restaurant" | "healthcare" | "hospitality" | "retail" | "real_estate" | "professional" | "education" | "other", challenges } },
+      { data: { phone, company, businessType: businessType as "single" | "multiple" | "franchise" | "agency", industry: industry as never, challenges } },
       {
         onSuccess: () => {
           toast.success("Profile complete! Welcome to Ravyu.");

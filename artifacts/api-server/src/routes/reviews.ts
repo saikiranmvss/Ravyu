@@ -1,10 +1,38 @@
 import { Router } from "express";
-import { db, reviewsTable } from "@workspace/db";
+import { db, reviewsTable, businessProfilesTable, reviewInsightsTable, usersTable } from "@workspace/db";
 import { eq, and, desc, ilike, or } from "drizzle-orm";
 import { ScrapeReviewsBody, GetReviewsQueryParams, DeleteReviewParams } from "@workspace/api-zod";
 import { requireAuth, type AuthRequest } from "../lib/auth";
+import { normalizeIndustry } from "../lib/feature-flags";
+import { extractInsightsFromReview } from "../lib/industry-intelligence";
 
 const router = Router();
+
+async function upsertReviewInsightsForUser(userId: number) {
+  const [profile] = await db.select().from(businessProfilesTable).where(eq(businessProfilesTable.userId, userId)).limit(1);
+  if (!profile) return;
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  const industry = normalizeIndustry(user?.industry);
+  const reviews = await db.select().from(reviewsTable).where(eq(reviewsTable.userId, userId));
+  await db.delete(reviewInsightsTable).where(eq(reviewInsightsTable.userId, userId));
+  const insightRows = reviews.flatMap((review) =>
+    extractInsightsFromReview(review.text, industry).map((insight) => ({
+      reviewId: review.id,
+      businessId: profile.id,
+      userId,
+      industry,
+      entityName: insight.entityName,
+      aspect: insight.aspect,
+      sentiment: insight.sentiment,
+      reason: insight.reason,
+      confidence: insight.confidence,
+      severity: insight.severity,
+    })),
+  );
+  if (insightRows.length > 0) {
+    await db.insert(reviewInsightsTable).values(insightRows);
+  }
+}
 
 router.get("/", requireAuth, async (req: AuthRequest, res) => {
   const params = GetReviewsQueryParams.safeParse(req.query);
@@ -79,6 +107,7 @@ router.post("/scrape", requireAuth, async (req: AuthRequest, res) => {
       sourceUrl: mapsUrl,
     }));
     await db.insert(reviewsTable).values(toInsert);
+    await upsertReviewInsightsForUser(req.userId!);
     res.json({ imported: toInsert.length, total: toInsert.length, message: "Demo mode: sample reviews imported" });
     return;
   }
@@ -125,7 +154,10 @@ router.post("/scrape", requireAuth, async (req: AuthRequest, res) => {
         sourceUrl: r.reviewUrl ?? mapsUrl,
       }));
 
-    if (toInsert.length > 0) await db.insert(reviewsTable).values(toInsert);
+    if (toInsert.length > 0) {
+      await db.insert(reviewsTable).values(toInsert);
+      await upsertReviewInsightsForUser(req.userId!);
+    }
     res.json({ imported: toInsert.length, total: toInsert.length, message: "Reviews imported successfully" });
   } catch (err) {
     req.log.error({ err }, "Scrape failed");
@@ -139,7 +171,13 @@ router.delete("/:id", requireAuth, async (req: AuthRequest, res) => {
   await db.delete(reviewsTable).where(
     and(eq(reviewsTable.id, parse.data.id), eq(reviewsTable.userId, req.userId!)),
   );
+  await upsertReviewInsightsForUser(req.userId!);
   res.status(204).end();
+});
+
+router.post("/recompute-insights", requireAuth, async (req: AuthRequest, res) => {
+  await upsertReviewInsightsForUser(req.userId!);
+  res.json({ ok: true });
 });
 
 export default router;

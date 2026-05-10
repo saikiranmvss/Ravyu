@@ -13,6 +13,7 @@ export const OnboardingInputIndustry = {
   restaurant: "restaurant",
   healthcare: "healthcare",
   hospitality: "hospitality",
+  travel: "travel",
   retail: "retail",
   real_estate: "real_estate",
   professional: "professional",

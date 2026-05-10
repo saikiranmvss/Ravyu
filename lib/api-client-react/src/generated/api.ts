@@ -35,11 +35,16 @@ import type {
   GeneratePostResult,
   GenerateReplyInput,
   GenerateReplyResult,
+  GetIndustryReportsParams,
   GetReviewRequestsParams,
   GetReviewsParams,
   HealthStatus,
+  IndustryProfile,
+  IndustryProfileInput,
+  IndustryReportsData,
   LoginInput,
   OnboardingInput,
+  PricingPlansData,
   PublicBusinessData,
   RefreshInput,
   ReportsData,
@@ -56,6 +61,7 @@ import type {
   UserProfileUpdate,
   UserSettings,
   UserSettingsInput,
+  WeeklyReport,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -2828,6 +2834,348 @@ export function useGetReports<
 }
 
 /**
+ * @summary Get industry profile configuration
+ */
+export const getGetIndustryProfileUrl = () => {
+  return `/api/business/industry-profile`;
+};
+
+export const getIndustryProfile = async (
+  options?: RequestInit,
+): Promise<IndustryProfile> => {
+  return customFetch<IndustryProfile>(getGetIndustryProfileUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetIndustryProfileQueryKey = () => {
+  return [`/api/business/industry-profile`] as const;
+};
+
+export const getGetIndustryProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getIndustryProfile>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getIndustryProfile>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetIndustryProfileQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getIndustryProfile>>
+  > = ({ signal }) => getIndustryProfile({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getIndustryProfile>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetIndustryProfileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getIndustryProfile>>
+>;
+export type GetIndustryProfileQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get industry profile configuration
+ */
+
+export function useGetIndustryProfile<
+  TData = Awaited<ReturnType<typeof getIndustryProfile>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getIndustryProfile>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetIndustryProfileQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update industry profile configuration
+ */
+export const getUpdateIndustryProfileUrl = () => {
+  return `/api/business/industry-profile`;
+};
+
+export const updateIndustryProfile = async (
+  industryProfileInput: IndustryProfileInput,
+  options?: RequestInit,
+): Promise<IndustryProfile> => {
+  return customFetch<IndustryProfile>(getUpdateIndustryProfileUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(industryProfileInput),
+  });
+};
+
+export const getUpdateIndustryProfileMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateIndustryProfile>>,
+    TError,
+    { data: BodyType<IndustryProfileInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateIndustryProfile>>,
+  TError,
+  { data: BodyType<IndustryProfileInput> },
+  TContext
+> => {
+  const mutationKey = ["updateIndustryProfile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateIndustryProfile>>,
+    { data: BodyType<IndustryProfileInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateIndustryProfile(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateIndustryProfileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateIndustryProfile>>
+>;
+export type UpdateIndustryProfileMutationBody = BodyType<IndustryProfileInput>;
+export type UpdateIndustryProfileMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update industry profile configuration
+ */
+export const useUpdateIndustryProfile = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateIndustryProfile>>,
+    TError,
+    { data: BodyType<IndustryProfileInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateIndustryProfile>>,
+  TError,
+  { data: BodyType<IndustryProfileInput> },
+  TContext
+> => {
+  return useMutation(getUpdateIndustryProfileMutationOptions(options));
+};
+
+/**
+ * @summary Get industry specific intelligence report
+ */
+export const getGetIndustryReportsUrl = (params?: GetIndustryReportsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/business/reports/industry?${stringifiedParams}`
+    : `/api/business/reports/industry`;
+};
+
+export const getIndustryReports = async (
+  params?: GetIndustryReportsParams,
+  options?: RequestInit,
+): Promise<IndustryReportsData> => {
+  return customFetch<IndustryReportsData>(getGetIndustryReportsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetIndustryReportsQueryKey = (
+  params?: GetIndustryReportsParams,
+) => {
+  return [
+    `/api/business/reports/industry`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetIndustryReportsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getIndustryReports>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetIndustryReportsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getIndustryReports>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetIndustryReportsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getIndustryReports>>
+  > = ({ signal }) => getIndustryReports(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getIndustryReports>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetIndustryReportsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getIndustryReports>>
+>;
+export type GetIndustryReportsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get industry specific intelligence report
+ */
+
+export function useGetIndustryReports<
+  TData = Awaited<ReturnType<typeof getIndustryReports>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetIndustryReportsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getIndustryReports>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetIndustryReportsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Generate weekly owner report snapshot
+ */
+export const getGenerateWeeklyIndustryReportUrl = () => {
+  return `/api/business/reports/weekly/generate`;
+};
+
+export const generateWeeklyIndustryReport = async (
+  options?: RequestInit,
+): Promise<WeeklyReport> => {
+  return customFetch<WeeklyReport>(getGenerateWeeklyIndustryReportUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getGenerateWeeklyIndustryReportMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateWeeklyIndustryReport>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateWeeklyIndustryReport>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["generateWeeklyIndustryReport"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateWeeklyIndustryReport>>,
+    void
+  > = () => {
+    return generateWeeklyIndustryReport(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateWeeklyIndustryReportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateWeeklyIndustryReport>>
+>;
+
+export type GenerateWeeklyIndustryReportMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate weekly owner report snapshot
+ */
+export const useGenerateWeeklyIndustryReport = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateWeeklyIndustryReport>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateWeeklyIndustryReport>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getGenerateWeeklyIndustryReportMutationOptions(options));
+};
+
+/**
  * @summary Export review report as CSV
  */
 export const getExportReportsCsvUrl = () => {
@@ -3504,6 +3852,81 @@ export function useGetTrackedReviewLink<
     token,
     options,
   );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get industry pricing plans
+ */
+export const getGetPricingPlansUrl = () => {
+  return `/api/public/pricing`;
+};
+
+export const getPricingPlans = async (
+  options?: RequestInit,
+): Promise<PricingPlansData> => {
+  return customFetch<PricingPlansData>(getGetPricingPlansUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPricingPlansQueryKey = () => {
+  return [`/api/public/pricing`] as const;
+};
+
+export const getGetPricingPlansQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPricingPlans>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPricingPlans>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPricingPlansQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPricingPlans>>> = ({
+    signal,
+  }) => getPricingPlans({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPricingPlans>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPricingPlansQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPricingPlans>>
+>;
+export type GetPricingPlansQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get industry pricing plans
+ */
+
+export function useGetPricingPlans<
+  TData = Awaited<ReturnType<typeof getPricingPlans>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPricingPlans>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPricingPlansQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

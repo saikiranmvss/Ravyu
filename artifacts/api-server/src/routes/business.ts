@@ -1,5 +1,14 @@
 import { Router } from "express";
-import { db, businessProfilesTable, businessServicesTable, reviewsTable } from "@workspace/db";
+import {
+  db,
+  businessProfilesTable,
+  businessServicesTable,
+  reviewsTable,
+  reviewInsightsTable,
+  industryProfilesTable,
+  usersTable,
+  weeklyReportsTable,
+} from "@workspace/db";
 import { eq, desc, avg, count, and } from "drizzle-orm";
 import {
   CreateBusinessProfileBody,
@@ -11,6 +20,8 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth, type AuthRequest } from "../lib/auth";
 import { slugify } from "../lib/slugify";
+import { buildActionSuggestions, type InsightRecord } from "../lib/industry-intelligence";
+import { normalizeIndustry } from "../lib/feature-flags";
 
 const router = Router();
 
@@ -54,6 +65,21 @@ router.get("/dashboard", requireAuth, async (req: AuthRequest, res) => {
     }
   }
 
+  const insights = profile
+    ? await db.select().from(reviewInsightsTable).where(eq(reviewInsightsTable.businessId, profile.id))
+    : [];
+  const actionSuggestions = buildActionSuggestions(
+    insights.slice(0, 20).map((i) => ({
+      entityName: i.entityName,
+      aspect: i.aspect,
+      sentiment: i.sentiment as "positive" | "neutral" | "negative",
+      reason: i.reason ?? "",
+      confidence: Number(i.confidence),
+      severity: i.severity as "low" | "medium" | "high",
+    })),
+    normalizeIndustry((await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1))[0]?.industry),
+  );
+
   res.json({
     totalReviews,
     averageRating,
@@ -63,7 +89,60 @@ router.get("/dashboard", requireAuth, async (req: AuthRequest, res) => {
     totalRequests,
     positiveReviews,
     negativeReviews,
+    actionSuggestions,
   });
+});
+
+router.get("/industry-profile", requireAuth, async (req: AuthRequest, res) => {
+  const [profile] = await db.select().from(businessProfilesTable).where(eq(businessProfilesTable.userId, req.userId!)).limit(1);
+  if (!profile) {
+    res.status(404).json({ error: "No business profile" });
+    return;
+  }
+  const [industryProfile] = await db
+    .select()
+    .from(industryProfilesTable)
+    .where(eq(industryProfilesTable.businessId, profile.id))
+    .limit(1);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+  res.json(
+    industryProfile ?? {
+      businessId: profile.id,
+      industry: normalizeIndustry(user?.industry),
+      subIndustry: null,
+      riskSensitiveMode: normalizeIndustry(user?.industry) === "healthcare",
+      multiOutlet: false,
+    },
+  );
+});
+
+router.put("/industry-profile", requireAuth, async (req: AuthRequest, res) => {
+  const body = req.body as {
+    industry?: string;
+    subIndustry?: string | null;
+    riskSensitiveMode?: boolean;
+    multiOutlet?: boolean;
+  };
+  const [profile] = await db.select().from(businessProfilesTable).where(eq(businessProfilesTable.userId, req.userId!)).limit(1);
+  if (!profile) {
+    res.status(404).json({ error: "No business profile" });
+    return;
+  }
+  const payload = {
+    industry: normalizeIndustry(body.industry),
+    subIndustry: body.subIndustry ?? null,
+    riskSensitiveMode: Boolean(body.riskSensitiveMode),
+    multiOutlet: Boolean(body.multiOutlet),
+    updatedAt: new Date(),
+  };
+  const [existing] = await db.select().from(industryProfilesTable).where(eq(industryProfilesTable.businessId, profile.id)).limit(1);
+  if (existing) {
+    await db.update(industryProfilesTable).set(payload).where(eq(industryProfilesTable.businessId, profile.id));
+  } else {
+    await db.insert(industryProfilesTable).values({ ...payload, businessId: profile.id, createdAt: new Date() });
+  }
+  const [updated] = await db.select().from(industryProfilesTable).where(eq(industryProfilesTable.businessId, profile.id)).limit(1);
+  res.json(updated);
 });
 
 // ── Business Profile ───────────────────────────────────────────────────────
@@ -212,6 +291,134 @@ router.get("/reports", requireAuth, async (req: AuthRequest, res) => {
     .slice(0, 5)
     .map(([author, count]) => ({ author, count }));
   res.json({ totalReviews, averageRating, positiveCount, neutralCount, negativeCount, last7DaysCount, ratingDistribution, topAuthors });
+});
+
+router.get("/reports/industry", requireAuth, async (req: AuthRequest, res) => {
+  const window = Number(req.query.window ?? 30);
+  const [profile] = await db.select().from(businessProfilesTable).where(eq(businessProfilesTable.userId, req.userId!)).limit(1);
+  if (!profile) {
+    res.json({
+      industry: "other",
+      topPraisedItems: [],
+      topComplainedItems: [],
+      mixedItems: [],
+      aspectBreakdown: [],
+      trend: { positive: 0, neutral: 0, negative: 0 },
+      actionSuggestions: [],
+      riskAlerts: [],
+      weeklyReport: null,
+    });
+    return;
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+  const industry = normalizeIndustry(user?.industry);
+  const from = new Date(Date.now() - window * 24 * 60 * 60 * 1000);
+  const insights = await db.select().from(reviewInsightsTable).where(eq(reviewInsightsTable.businessId, profile.id));
+  const filtered = insights.filter((i) => new Date(i.createdAt) >= from);
+  const trend = {
+    positive: filtered.filter((i) => i.sentiment === "positive").length,
+    neutral: filtered.filter((i) => i.sentiment === "neutral").length,
+    negative: filtered.filter((i) => i.sentiment === "negative").length,
+  };
+  const byEntity = new Map<string, { pos: number; neg: number }>();
+  for (const i of filtered) {
+    const key = i.entityName ?? i.aspect;
+    const bucket = byEntity.get(key) ?? { pos: 0, neg: 0 };
+    if (i.sentiment === "positive") bucket.pos += 1;
+    if (i.sentiment === "negative") bucket.neg += 1;
+    byEntity.set(key, bucket);
+  }
+  const ranked = [...byEntity.entries()].map(([name, val]) => ({ name, ...val }));
+  const topPraisedItems = ranked.sort((a, b) => b.pos - a.pos).slice(0, 5);
+  const topComplainedItems = ranked.sort((a, b) => b.neg - a.neg).slice(0, 5);
+  const mixedItems = ranked.filter((r) => r.pos > 0 && r.neg > 0).slice(0, 5);
+  const aspectMap = new Map<string, { positive: number; neutral: number; negative: number }>();
+  for (const i of filtered) {
+    const bucket = aspectMap.get(i.aspect) ?? { positive: 0, neutral: 0, negative: 0 };
+    if (i.sentiment === "positive") bucket.positive += 1;
+    if (i.sentiment === "neutral") bucket.neutral += 1;
+    if (i.sentiment === "negative") bucket.negative += 1;
+    aspectMap.set(i.aspect, bucket);
+  }
+  const aspectBreakdown = [...aspectMap.entries()].map(([aspect, counts]) => ({ aspect, ...counts }));
+  const suggestionInput: InsightRecord[] = filtered.map((i) => ({
+    entityName: i.entityName,
+    aspect: i.aspect,
+    sentiment: i.sentiment as "positive" | "neutral" | "negative",
+    reason: i.reason ?? "",
+    confidence: Number(i.confidence),
+    severity: i.severity as "low" | "medium" | "high",
+  }));
+  const actionSuggestions = buildActionSuggestions(suggestionInput, industry);
+  const riskAlerts = filtered
+    .filter((i) => i.severity === "high" || /legal|safety|unsafe|billing|fraud|infection/i.test(i.reason ?? ""))
+    .slice(0, 5)
+    .map((i) => ({ aspect: i.aspect, reason: i.reason, severity: i.severity }));
+  const [weeklyReport] = await db
+    .select()
+    .from(weeklyReportsTable)
+    .where(eq(weeklyReportsTable.businessId, profile.id))
+    .orderBy(desc(weeklyReportsTable.createdAt))
+    .limit(1);
+  res.json({
+    industry,
+    topPraisedItems,
+    topComplainedItems,
+    mixedItems,
+    aspectBreakdown,
+    trend,
+    actionSuggestions,
+    riskAlerts,
+    weeklyReport: weeklyReport ?? null,
+  });
+});
+
+router.post("/reports/weekly/generate", requireAuth, async (req: AuthRequest, res) => {
+  const [profile] = await db.select().from(businessProfilesTable).where(eq(businessProfilesTable.userId, req.userId!)).limit(1);
+  if (!profile) {
+    res.status(404).json({ error: "No business profile" });
+    return;
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+  const industry = normalizeIndustry(user?.industry);
+  const periodEnd = new Date();
+  const periodStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const insights = await db.select().from(reviewInsightsTable).where(eq(reviewInsightsTable.businessId, profile.id));
+  const recent = insights.filter((i) => new Date(i.createdAt) >= periodStart);
+  const positives = recent.filter((i) => i.sentiment === "positive").length;
+  const negatives = recent.filter((i) => i.sentiment === "negative").length;
+  const topWins = recent.filter((i) => i.sentiment === "positive").slice(0, 3).map((i) => `${i.aspect}${i.entityName ? ` (${i.entityName})` : ""}`);
+  const attentionAreas = recent.filter((i) => i.sentiment === "negative").slice(0, 3).map((i) => `${i.aspect}${i.entityName ? ` (${i.entityName})` : ""}`);
+  const suggestions = buildActionSuggestions(
+    recent.map((i) => ({
+      entityName: i.entityName,
+      aspect: i.aspect,
+      sentiment: i.sentiment as "positive" | "neutral" | "negative",
+      reason: i.reason ?? "",
+      confidence: Number(i.confidence),
+      severity: i.severity as "low" | "medium" | "high",
+    })),
+    industry,
+  );
+  const summary = `This week you received ${positives} positive and ${negatives} negative industry-specific feedback signals.`;
+  const recommendedAction = suggestions[0] ?? "Monitor trends and keep response quality high.";
+  await db.insert(weeklyReportsTable).values({
+    businessId: profile.id,
+    industry,
+    periodStart,
+    periodEnd,
+    summary,
+    topWins,
+    attentionAreas,
+    recommendedAction,
+  });
+  const [report] = await db
+    .select()
+    .from(weeklyReportsTable)
+    .where(eq(weeklyReportsTable.businessId, profile.id))
+    .orderBy(desc(weeklyReportsTable.createdAt))
+    .limit(1);
+  res.status(201).json(report);
 });
 
 router.get("/reports/export", requireAuth, async (req: AuthRequest, res) => {

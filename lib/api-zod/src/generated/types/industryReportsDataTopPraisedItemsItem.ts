@@ -6,7 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ReportsDataTopAuthorsItem = {
-  author: string;
-  count: number;
+export type IndustryReportsDataTopPraisedItemsItem = {
+  name: string;
+  pos: number;
+  neg: number;
 };

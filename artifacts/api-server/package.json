@@ -7,7 +7,8 @@
     "dev": "set NODE_ENV=development&& set PORT=8080&& pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "pnpm dlx tsx --test src/lib/industry-intelligence.test.ts"
   },
   "dependencies": {
     "@workspace/api-zod": "workspace:*",

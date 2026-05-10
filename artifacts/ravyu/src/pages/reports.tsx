@@ -1,4 +1,4 @@
-import { useGetReports, getGetReportsQueryKey } from "@workspace/api-client-react";
+import { useGetReports, getGetReportsQueryKey, useGetIndustryReports, GetIndustryReportsWindow } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,8 @@ const RATING_COLORS: Record<number, string> = {
 
 export default function ReportsPage() {
   const { data: report, isLoading } = useGetReports({ query: { queryKey: getGetReportsQueryKey() } });
+  const { data: industryReport } = useGetIndustryReports({ window: GetIndustryReportsWindow.NUMBER_30 });
+  const topAuthors = (report as { topAuthors?: Array<{ author: string; count: number }> } | undefined)?.topAuthors ?? [];
 
   const total = report?.totalReviews ?? 0;
   const positivePercent = total > 0 ? Math.round(((report?.positiveCount ?? 0) / total) * 100) : 0;
@@ -118,12 +120,12 @@ export default function ReportsPage() {
       </div>
 
       {/* Top authors */}
-      {(report?.topAuthors?.length ?? 0) > 0 && (
+      {topAuthors.length > 0 && (
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-base">Top Reviewers</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {report!.topAuthors!.map((author) => (
+              {topAuthors.map((author) => (
                 <div key={author.author} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                   <div className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
@@ -138,6 +140,21 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-base">Industry Action Layer</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-sm text-muted-foreground">What to fix next based on aspect-level patterns.</p>
+          {(industryReport?.actionSuggestions ?? []).slice(0, 3).map((item) => (
+            <div key={item} className="rounded-md border p-3 text-sm">{item}</div>
+          ))}
+          {(industryReport?.topComplainedItems ?? []).slice(0, 3).map((item) => (
+            <div key={item.name} className="text-sm flex justify-between">
+              <span>{item.name}</span><Badge variant="destructive">{item.neg}</Badge>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -612,6 +612,68 @@ paths:
               schema:
                 $ref: "#/components/schemas/ReportsData"
 
+  /business/industry-profile:
+    get:
+      operationId: getIndustryProfile
+      tags: [business]
+      summary: Get industry profile configuration
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndustryProfile"
+    put:
+      operationId: updateIndustryProfile
+      tags: [business]
+      summary: Update industry profile configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IndustryProfileInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndustryProfile"
+
+  /business/reports/industry:
+    get:
+      operationId: getIndustryReports
+      tags: [reports]
+      summary: Get industry specific intelligence report
+      parameters:
+        - in: query
+          name: window
+          schema:
+            type: integer
+            enum: [7, 30, 90]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndustryReportsData"
+
+  /business/reports/weekly/generate:
+    post:
+      operationId: generateWeeklyIndustryReport
+      tags: [reports]
+      summary: Generate weekly owner report snapshot
+      responses:
+        "201":
+          description: Generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyReport"
+
   /business/reports/export:
     get:
       operationId: exportReportsCsv
@@ -755,6 +817,19 @@ paths:
         "404":
           description: Not found
 
+  /public/pricing:
+    get:
+      operationId: getPricingPlans
+      tags: [public]
+      summary: Get industry pricing plans
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PricingPlansData"
+
 components:
   schemas:
     HealthStatus:
@@ -880,7 +955,7 @@ components:
           enum: [single, multiple, franchise, agency]
         industry:
           type: string
-          enum: [restaurant, healthcare, hospitality, retail, real_estate, professional, education, other]
+          enum: [restaurant, healthcare, hospitality, travel, retail, real_estate, professional, education, other]
         challenges:
           type: array
           items:
@@ -1215,6 +1290,10 @@ components:
           type: integer
         negativeReviews:
           type: integer
+        actionSuggestions:
+          type: array
+          items:
+            type: string
 
     # ── Review Requests ───────────────────────────────────────────────────────
     ReviewRequest:
@@ -1348,6 +1427,167 @@ components:
                 type: integer
               count:
                 type: integer
+
+    IndustryProfile:
+      type: object
+      required: [businessId, industry, riskSensitiveMode, multiOutlet]
+      properties:
+        businessId:
+          type: integer
+        industry:
+          type: string
+        subIndustry:
+          type: ["string", "null"]
+        riskSensitiveMode:
+          type: boolean
+        multiOutlet:
+          type: boolean
+
+    IndustryProfileInput:
+      type: object
+      properties:
+        industry:
+          type: string
+        subIndustry:
+          type: string
+        riskSensitiveMode:
+          type: boolean
+        multiOutlet:
+          type: boolean
+
+    WeeklyReport:
+      type: object
+      required: [summary, topWins, attentionAreas, recommendedAction, createdAt]
+      properties:
+        summary:
+          type: string
+        topWins:
+          type: array
+          items:
+            type: string
+        attentionAreas:
+          type: array
+          items:
+            type: string
+        recommendedAction:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    IndustryReportsData:
+      type: object
+      required: [industry, topPraisedItems, topComplainedItems, mixedItems, aspectBreakdown, trend, actionSuggestions, riskAlerts]
+      properties:
+        industry:
+          type: string
+        topPraisedItems:
+          type: array
+          items:
+            type: object
+            required: [name, pos, neg]
+            properties:
+              name:
+                type: string
+              pos:
+                type: integer
+              neg:
+                type: integer
+        topComplainedItems:
+          type: array
+          items:
+            type: object
+            required: [name, pos, neg]
+            properties:
+              name:
+                type: string
+              pos:
+                type: integer
+              neg:
+                type: integer
+        mixedItems:
+          type: array
+          items:
+            type: object
+            required: [name, pos, neg]
+            properties:
+              name:
+                type: string
+              pos:
+                type: integer
+              neg:
+                type: integer
+        aspectBreakdown:
+          type: array
+          items:
+            type: object
+            required: [aspect, positive, neutral, negative]
+            properties:
+              aspect:
+                type: string
+              positive:
+                type: integer
+              neutral:
+                type: integer
+              negative:
+                type: integer
+        trend:
+          type: object
+          required: [positive, neutral, negative]
+          properties:
+            positive:
+              type: integer
+            neutral:
+              type: integer
+            negative:
+              type: integer
+        actionSuggestions:
+          type: array
+          items:
+            type: string
+        riskAlerts:
+          type: array
+          items:
+            type: object
+            required: [aspect, severity]
+            properties:
+              aspect:
+                type: string
+              reason:
+                type: ["string", "null"]
+              severity:
+                type: string
+        weeklyReport:
+          oneOf:
+            - $ref: "#/components/schemas/WeeklyReport"
+            - type: "null"
+
+    PricingPlansData:
+      type: object
+      required: [plans]
+      properties:
+        plans:
+          type: array
+          items:
+            type: object
+            required: [industry, tiers]
+            properties:
+              industry:
+                type: string
+              tiers:
+                type: array
+                items:
+                  type: object
+                  required: [name, features]
+                  properties:
+                    name:
+                      type: string
+                    monthlyInr:
+                      type: ["number", "null"]
+                    features:
+                      type: array
+                      items:
+                        type: string
         topAuthors:
           type: array
           items:

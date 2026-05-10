@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
-  LayoutDashboard, Star, Sparkles, Building2, Users, BarChart3, LineChart, Settings, LogOut, User, Menu, ChevronDown, ChevronRight,
+  LayoutDashboard, Star, Sparkles, Building2, Users, BarChart3, LineChart, Settings, LogOut, User, Menu, ChevronDown, ChevronRight, Brain, BadgeIndianRupee,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
 
@@ -34,7 +34,9 @@ const navItems: NavItem[] = [
     ],
   },
   { label: "Reports", href: "/reports", icon: <BarChart3 className="w-4 h-4" /> },
+  { label: "Industry Insights", href: "/industry-insights", icon: <Brain className="w-4 h-4" /> },
   { label: "Analytics", href: "/analytics", icon: <LineChart className="w-4 h-4" /> },
+  { label: "Plans", href: "/plans", icon: <BadgeIndianRupee className="w-4 h-4" /> },
 ];
 
 function NavLink({ item, collapsed = false }: { item: NavItem; collapsed?: boolean }) {

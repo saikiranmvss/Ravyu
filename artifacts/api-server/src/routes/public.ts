@@ -11,6 +11,42 @@ import {
 
 const router = Router();
 
+router.get("/pricing", async (_req, res) => {
+  res.json({
+    plans: [
+      {
+        industry: "restaurant",
+        tiers: [
+          { name: "Starter", monthlyInr: 999, features: ["Google review sync", "Basic sentiment analysis", "AI replies (limited)", "Monthly summary"] },
+          { name: "Growth", monthlyInr: 2499, features: ["Food-level sentiment analysis", "AI action insights", "Weekly reports", "Smart AI replies", "Trend tracking"] },
+          { name: "Pro", monthlyInr: 4999, features: ["Multi-outlet support", "Competitor comparison (optional)", "Priority support", "Advanced insights"] },
+        ],
+      },
+      {
+        industry: "healthcare",
+        tiers: [
+          { name: "Clinic", monthlyInr: 2999, features: ["Aspect-based patient feedback", "Doctor-wise insights", "Risk alerts"] },
+          { name: "Hospital", monthlyInr: null, features: ["Enterprise workflows", "Compliance controls", "Custom reporting"], pricingType: "custom" },
+        ],
+      },
+      {
+        industry: "hospitality",
+        tiers: [
+          { name: "Standard", monthlyInr: 3499, features: ["Department sentiment", "Experience trends", "Smart guest responses"] },
+          { name: "Advanced", monthlyInr: 6999, features: ["Multi-property insights", "Benchmarking", "Priority support"] },
+        ],
+      },
+      {
+        industry: "travel",
+        tiers: [
+          { name: "Growth", monthlyInr: 3999, features: ["Tour/package sentiment", "Guide performance insights", "Complaint prediction"] },
+          { name: "Scale", monthlyInr: 7999, features: ["Multi-route insights", "Alert automation", "Priority support"] },
+        ],
+      },
+    ],
+  });
+});
+
 router.get("/business/:slug", async (req, res) => {
   const parse = GetPublicBusinessParams.safeParse({ slug: req.params.slug });
   if (!parse.success) { res.status(400).json({ error: "Invalid slug" }); return; }

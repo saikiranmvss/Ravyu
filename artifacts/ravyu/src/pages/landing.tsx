@@ -14,6 +14,11 @@ export default function LandingPage() {
           <span className="font-bold text-xl tracking-tight">Ravyu</span>
         </div>
         <div className="flex items-center gap-3">
+          <Link href="/pricing">
+            <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10" data-testid="nav-pricing">
+              Pricing
+            </Button>
+          </Link>
           <Link href="/login">
             <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10" data-testid="nav-login">
               Log in

@@ -21,6 +21,9 @@ import ProfilePage from "@/pages/profile";
 import PublicBusinessPage from "@/pages/public-business";
 import ReviewCollectionPage from "@/pages/review-collection";
 import TrackedReviewPage from "@/pages/tracked-review";
+import IndustryInsightsPage from "@/pages/industry-insights";
+import PlansPage from "@/pages/plans";
+import PricingPage from "@/pages/pricing";
 import { AppLayout } from "@/components/layout/app-layout";
 
 setAuthTokenGetter(() => localStorage.getItem("accessToken"));
@@ -45,6 +48,7 @@ function Router() {
       <Route path="/signup" component={SignupPage} />
       <Route path="/onboarding" component={OnboardingPage} />
       <Route path="/b/:slug" component={PublicBusinessPage} />
+      <Route path="/pricing" component={PricingPage} />
       <Route path="/review/:slug/:token" component={TrackedReviewPage} />
       <Route path="/review/:slug" component={ReviewCollectionPage} />
       <Route>
@@ -58,6 +62,8 @@ function Router() {
               <Route path="/business/requests" component={BusinessRequestsPage} />
               <Route path="/reports" component={ReportsPage} />
               <Route path="/analytics" component={AnalyticsPage} />
+              <Route path="/industry-insights" component={IndustryInsightsPage} />
+              <Route path="/plans" component={PlansPage} />
               <Route path="/settings" component={SettingsPage} />
               <Route path="/profile" component={ProfilePage} />
               <Route component={NotFound} />
