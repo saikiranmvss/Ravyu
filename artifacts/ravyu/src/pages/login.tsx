@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
-import { Star, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { AppBrandLogo } from "@/components/brand-logo";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -50,11 +51,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[hsl(227,45%,10%)] flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-[hsl(40,93%,50%)] flex items-center justify-center">
-            <Star className="w-4 h-4 text-[hsl(227,45%,12%)]" />
-          </div>
-          <span className="font-bold text-xl text-white tracking-tight">Ravyu</span>
+        <div className="flex justify-center mb-10">
+          <AppBrandLogo
+            className="h-16 w-auto max-w-[min(280px,85vw)] object-contain"
+            alt="Ravyu"
+          />
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">

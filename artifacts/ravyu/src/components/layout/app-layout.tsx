@@ -12,6 +12,7 @@ import {
   LayoutDashboard, Star, Sparkles, Building2, Users, BarChart3, LineChart, Settings, LogOut, User, Menu, ChevronDown, ChevronRight, Brain, BadgeIndianRupee,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
+import { AppBrandLogo } from "@/components/brand-logo";
 
 interface NavItem {
   label: string;
@@ -108,11 +109,13 @@ function NavLink({ item, collapsed = false }: { item: NavItem; collapsed?: boole
 function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose?: () => void }) {
   return (
     <div className={cn("flex flex-col h-full bg-sidebar", mobile ? "w-full" : "w-64")}>
-      <div className="flex items-center gap-2 px-5 py-5 border-b border-sidebar-border">
-        <div className="w-7 h-7 rounded-lg bg-sidebar-primary flex items-center justify-center">
-          <Star className="w-4 h-4 text-sidebar-primary-foreground" />
-        </div>
-        <span className="font-bold text-lg text-sidebar-foreground tracking-tight">Ravyu</span>
+      <div className="flex items-center px-4 py-4 border-b border-sidebar-border">
+        <Link href="/dashboard" className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring rounded-md">
+          <AppBrandLogo
+            className="w-auto max-w-[min(200px,calc(100vw-2rem))] object-contain"
+            alt="Ravyu"
+          />
+        </Link>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => (

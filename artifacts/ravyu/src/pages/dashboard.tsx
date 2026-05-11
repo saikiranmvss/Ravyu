@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { AppFaviconMark } from "@/components/brand-logo";
 import { Star, MessageSquare, Users, TrendingUp } from "lucide-react";
 
 function StarRating({ rating }: { rating: number }) {
@@ -33,9 +34,17 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-0.5">Your reputation at a glance</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
+        <AppFaviconMark
+          className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 object-contain"
+          alt="Ravyu"
+        />
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground text-sm mt-0.5">Your reputation at a glance</p>
+        </div>
       </div>
 
       {/* KPI cards */}
