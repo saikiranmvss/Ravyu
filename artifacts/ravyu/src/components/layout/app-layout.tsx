@@ -34,7 +34,16 @@ const navItems: NavItem[] = [
     ],
   },
   { label: "Reports", href: "/reports", icon: <BarChart3 className="w-4 h-4" /> },
-  { label: "Industry Insights", href: "/industry-insights", icon: <Brain className="w-4 h-4" /> },
+  {
+    label: "Intelligence",
+    href: "/industry-insights",
+    icon: <Brain className="w-4 h-4" />,
+    children: [
+      { label: "Industry insights", href: "/industry-insights" },
+      { label: "Weekly reports", href: "/weekly-reports" },
+      { label: "Risk & compliance", href: "/risk-compliance" },
+    ],
+  },
   { label: "Analytics", href: "/analytics", icon: <LineChart className="w-4 h-4" /> },
   { label: "Plans", href: "/plans", icon: <BadgeIndianRupee className="w-4 h-4" /> },
 ];

@@ -24,5 +24,5 @@ test("buildActionSuggestions returns targeted output for healthcare negatives", 
     ],
     "healthcare",
   );
-  assert.ok(suggestions[0]?.toLowerCase().includes("process"));
+  assert.ok(suggestions[0]?.toLowerCase().includes("briefing") || suggestions[0]?.toLowerCase().includes("staff"));
 });

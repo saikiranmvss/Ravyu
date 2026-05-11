@@ -744,6 +744,7 @@ export const GetIndustryReportsResponse = zod.object({
   weeklyReport: zod
     .union([
       zod.object({
+        id: zod.number(),
         summary: zod.string(),
         topWins: zod.array(zod.string()),
         attentionAreas: zod.array(zod.string()),
@@ -753,6 +754,66 @@ export const GetIndustryReportsResponse = zod.object({
       zod.null(),
     ])
     .optional(),
+  priorTrend: zod
+    .object({
+      positive: zod.number(),
+      neutral: zod.number(),
+      negative: zod.number(),
+    })
+    .optional(),
+  momentum: zod
+    .object({
+      negativeDeltaPercent: zod.number().nullish(),
+      summary: zod.string(),
+    })
+    .optional(),
+  aspectMomentum: zod
+    .array(
+      zod.object({
+        aspect: zod.string(),
+        negativeCount: zod.number(),
+        priorNegativeCount: zod.number(),
+        changePercent: zod.number().nullable(),
+      }),
+    )
+    .optional(),
+  careTeamInsights: zod
+    .array(
+      zod.object({
+        label: zod.string(),
+        positives: zod.number(),
+        negatives: zod.number(),
+        neutrals: zod.number(),
+      }),
+    )
+    .optional(),
+  travelEarlyWarning: zod
+    .union([
+      zod.object({
+        level: zod.enum(["none", "watch", "elevated"]),
+        summary: zod.string(),
+        factors: zod.array(zod.string()),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+  hospitalityTrendSummary: zod.string().nullish(),
+});
+
+/**
+ * @summary List saved weekly owner reports for the business
+ */
+export const ListWeeklyIndustryReportsResponse = zod.object({
+  reports: zod.array(
+    zod.object({
+      id: zod.number(),
+      summary: zod.string(),
+      topWins: zod.array(zod.string()),
+      attentionAreas: zod.array(zod.string()),
+      recommendedAction: zod.string(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
 });
 
 /**

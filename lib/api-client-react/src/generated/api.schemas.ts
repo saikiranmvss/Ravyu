@@ -489,11 +489,52 @@ export interface IndustryProfileInput {
 }
 
 export interface WeeklyReport {
+  id: number;
   summary: string;
   topWins: string[];
   attentionAreas: string[];
   recommendedAction: string;
   createdAt: string;
+}
+
+export interface WeeklyReportsListResponse {
+  reports: WeeklyReport[];
+}
+
+export interface IndustryMomentum {
+  /** @nullable */
+  negativeDeltaPercent?: number | null;
+  summary: string;
+}
+
+export interface AspectMomentumItem {
+  aspect: string;
+  negativeCount: number;
+  priorNegativeCount: number;
+  /** @nullable */
+  changePercent: number | null;
+}
+
+export interface CareTeamInsight {
+  label: string;
+  positives: number;
+  negatives: number;
+  neutrals: number;
+}
+
+export type TravelEarlyWarningLevel =
+  (typeof TravelEarlyWarningLevel)[keyof typeof TravelEarlyWarningLevel];
+
+export const TravelEarlyWarningLevel = {
+  none: "none",
+  watch: "watch",
+  elevated: "elevated",
+} as const;
+
+export interface TravelEarlyWarning {
+  level: TravelEarlyWarningLevel;
+  summary: string;
+  factors: string[];
 }
 
 export type IndustryReportsDataTopPraisedItemsItem = {
@@ -534,6 +575,12 @@ export type IndustryReportsDataRiskAlertsItem = {
   severity: string;
 };
 
+export type IndustryReportsDataPriorTrend = {
+  positive: number;
+  neutral: number;
+  negative: number;
+};
+
 export interface IndustryReportsData {
   industry: string;
   topPraisedItems: IndustryReportsDataTopPraisedItemsItem[];
@@ -544,6 +591,13 @@ export interface IndustryReportsData {
   actionSuggestions: string[];
   riskAlerts: IndustryReportsDataRiskAlertsItem[];
   weeklyReport?: WeeklyReport | null;
+  priorTrend?: IndustryReportsDataPriorTrend;
+  momentum?: IndustryMomentum;
+  aspectMomentum?: AspectMomentumItem[];
+  careTeamInsights?: CareTeamInsight[];
+  travelEarlyWarning?: TravelEarlyWarning | null;
+  /** @nullable */
+  hospitalityTrendSummary?: string | null;
 }
 
 export type PricingPlansDataPlansItemTiersItem = {

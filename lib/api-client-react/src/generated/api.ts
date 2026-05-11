@@ -62,6 +62,7 @@ import type {
   UserSettings,
   UserSettingsInput,
   WeeklyReport,
+  WeeklyReportsListResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -3174,6 +3175,85 @@ export const useGenerateWeeklyIndustryReport = <
 > => {
   return useMutation(getGenerateWeeklyIndustryReportMutationOptions(options));
 };
+
+/**
+ * @summary List saved weekly owner reports for the business
+ */
+export const getListWeeklyIndustryReportsUrl = () => {
+  return `/api/business/reports/weekly`;
+};
+
+export const listWeeklyIndustryReports = async (
+  options?: RequestInit,
+): Promise<WeeklyReportsListResponse> => {
+  return customFetch<WeeklyReportsListResponse>(
+    getListWeeklyIndustryReportsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListWeeklyIndustryReportsQueryKey = () => {
+  return [`/api/business/reports/weekly`] as const;
+};
+
+export const getListWeeklyIndustryReportsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listWeeklyIndustryReports>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listWeeklyIndustryReports>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListWeeklyIndustryReportsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listWeeklyIndustryReports>>
+  > = ({ signal }) => listWeeklyIndustryReports({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listWeeklyIndustryReports>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListWeeklyIndustryReportsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listWeeklyIndustryReports>>
+>;
+export type ListWeeklyIndustryReportsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List saved weekly owner reports for the business
+ */
+
+export function useListWeeklyIndustryReports<
+  TData = Awaited<ReturnType<typeof listWeeklyIndustryReports>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listWeeklyIndustryReports>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListWeeklyIndustryReportsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Export review report as CSV

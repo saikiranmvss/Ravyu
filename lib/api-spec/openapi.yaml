@@ -674,6 +674,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/WeeklyReport"
 
+  /business/reports/weekly:
+    get:
+      operationId: listWeeklyIndustryReports
+      tags: [reports]
+      summary: List saved weekly owner reports for the business
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyReportsListResponse"
+
   /business/reports/export:
     get:
       operationId: exportReportsCsv
@@ -1457,8 +1470,10 @@ components:
 
     WeeklyReport:
       type: object
-      required: [summary, topWins, attentionAreas, recommendedAction, createdAt]
+      required: [id, summary, topWins, attentionAreas, recommendedAction, createdAt]
       properties:
+        id:
+          type: integer
         summary:
           type: string
         topWins:
@@ -1474,6 +1489,64 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    WeeklyReportsListResponse:
+      type: object
+      required: [reports]
+      properties:
+        reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/WeeklyReport"
+
+    IndustryMomentum:
+      type: object
+      required: [summary]
+      properties:
+        negativeDeltaPercent:
+          type: ["integer", "null"]
+        summary:
+          type: string
+
+    AspectMomentumItem:
+      type: object
+      required: [aspect, negativeCount, priorNegativeCount, changePercent]
+      properties:
+        aspect:
+          type: string
+        negativeCount:
+          type: integer
+        priorNegativeCount:
+          type: integer
+        changePercent:
+          type: ["integer", "null"]
+
+    CareTeamInsight:
+      type: object
+      required: [label, positives, negatives, neutrals]
+      properties:
+        label:
+          type: string
+        positives:
+          type: integer
+        negatives:
+          type: integer
+        neutrals:
+          type: integer
+
+    TravelEarlyWarning:
+      type: object
+      required: [level, summary, factors]
+      properties:
+        level:
+          type: string
+          enum: [none, watch, elevated]
+        summary:
+          type: string
+        factors:
+          type: array
+          items:
+            type: string
 
     IndustryReportsData:
       type: object
@@ -1561,6 +1634,32 @@ components:
           oneOf:
             - $ref: "#/components/schemas/WeeklyReport"
             - type: "null"
+        priorTrend:
+          type: object
+          required: [positive, neutral, negative]
+          properties:
+            positive:
+              type: integer
+            neutral:
+              type: integer
+            negative:
+              type: integer
+        momentum:
+          $ref: "#/components/schemas/IndustryMomentum"
+        aspectMomentum:
+          type: array
+          items:
+            $ref: "#/components/schemas/AspectMomentumItem"
+        careTeamInsights:
+          type: array
+          items:
+            $ref: "#/components/schemas/CareTeamInsight"
+        travelEarlyWarning:
+          oneOf:
+            - $ref: "#/components/schemas/TravelEarlyWarning"
+            - type: "null"
+        hospitalityTrendSummary:
+          type: ["string", "null"]
 
     PricingPlansData:
       type: object

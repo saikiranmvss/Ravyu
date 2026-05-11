@@ -5,12 +5,17 @@
  * Ravyu Business Hub API
  * OpenAPI spec version: 0.1.0
  */
+import type { AspectMomentumItem } from "./aspectMomentumItem";
+import type { CareTeamInsight } from "./careTeamInsight";
+import type { IndustryMomentum } from "./industryMomentum";
 import type { IndustryReportsDataAspectBreakdownItem } from "./industryReportsDataAspectBreakdownItem";
 import type { IndustryReportsDataMixedItemsItem } from "./industryReportsDataMixedItemsItem";
+import type { IndustryReportsDataPriorTrend } from "./industryReportsDataPriorTrend";
 import type { IndustryReportsDataRiskAlertsItem } from "./industryReportsDataRiskAlertsItem";
 import type { IndustryReportsDataTopComplainedItemsItem } from "./industryReportsDataTopComplainedItemsItem";
 import type { IndustryReportsDataTopPraisedItemsItem } from "./industryReportsDataTopPraisedItemsItem";
 import type { IndustryReportsDataTrend } from "./industryReportsDataTrend";
+import type { TravelEarlyWarning } from "./travelEarlyWarning";
 import type { WeeklyReport } from "./weeklyReport";
 
 export interface IndustryReportsData {
@@ -23,4 +28,11 @@ export interface IndustryReportsData {
   actionSuggestions: string[];
   riskAlerts: IndustryReportsDataRiskAlertsItem[];
   weeklyReport?: WeeklyReport | null;
+  priorTrend?: IndustryReportsDataPriorTrend;
+  momentum?: IndustryMomentum;
+  aspectMomentum?: AspectMomentumItem[];
+  careTeamInsights?: CareTeamInsight[];
+  travelEarlyWarning?: TravelEarlyWarning | null;
+  /** @nullable */
+  hospitalityTrendSummary?: string | null;
 }

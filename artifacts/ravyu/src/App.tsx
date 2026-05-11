@@ -22,6 +22,8 @@ import PublicBusinessPage from "@/pages/public-business";
 import ReviewCollectionPage from "@/pages/review-collection";
 import TrackedReviewPage from "@/pages/tracked-review";
 import IndustryInsightsPage from "@/pages/industry-insights";
+import WeeklyReportsPage from "@/pages/weekly-reports";
+import RiskCompliancePage from "@/pages/risk-compliance";
 import PlansPage from "@/pages/plans";
 import PricingPage from "@/pages/pricing";
 import { AppLayout } from "@/components/layout/app-layout";
@@ -63,6 +65,8 @@ function Router() {
               <Route path="/reports" component={ReportsPage} />
               <Route path="/analytics" component={AnalyticsPage} />
               <Route path="/industry-insights" component={IndustryInsightsPage} />
+              <Route path="/weekly-reports" component={WeeklyReportsPage} />
+              <Route path="/risk-compliance" component={RiskCompliancePage} />
               <Route path="/plans" component={PlansPage} />
               <Route path="/settings" component={SettingsPage} />
               <Route path="/profile" component={ProfilePage} />

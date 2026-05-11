@@ -6,11 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface WeeklyReport {
-  id: number;
+export interface IndustryMomentum {
+  /** @nullable */
+  negativeDeltaPercent?: number | null;
   summary: string;
-  topWins: string[];
-  attentionAreas: string[];
-  recommendedAction: string;
-  createdAt: Date;
 }

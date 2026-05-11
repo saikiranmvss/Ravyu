@@ -4,12 +4,11 @@ import {
   businessProfilesTable,
   businessServicesTable,
   reviewsTable,
-  reviewInsightsTable,
   industryProfilesTable,
   usersTable,
   weeklyReportsTable,
 } from "@workspace/db";
-import { eq, desc, avg, count, and } from "drizzle-orm";
+import { eq, avg, count, and, desc } from "drizzle-orm";
 import {
   CreateBusinessProfileBody,
   UpdateBusinessProfileBody,
@@ -20,8 +19,22 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth, type AuthRequest } from "../lib/auth";
 import { slugify } from "../lib/slugify";
-import { buildActionSuggestions, type InsightRecord } from "../lib/industry-intelligence";
+import { buildRichActionSuggestions, type InsightRecord } from "../lib/industry-intelligence";
+import { aggregateCareTeamInsights } from "../lib/healthcare-care-teams";
+import {
+  buildAspectMomentum,
+  buildHospitalityTrendSummary,
+  computeTravelEarlyWarning,
+  negativeSentimentMomentum,
+  sentimentTrend,
+  splitCurrentPriorInsights,
+} from "../lib/industry-report-metrics";
 import { normalizeIndustry } from "../lib/feature-flags";
+import {
+  isMissingTableError,
+  selectLatestWeeklyReportForBusiness,
+  selectReviewInsightsForBusiness,
+} from "../lib/review-insights-db";
 
 const router = Router();
 
@@ -65,10 +78,8 @@ router.get("/dashboard", requireAuth, async (req: AuthRequest, res) => {
     }
   }
 
-  const insights = profile
-    ? await db.select().from(reviewInsightsTable).where(eq(reviewInsightsTable.businessId, profile.id))
-    : [];
-  const actionSuggestions = buildActionSuggestions(
+  const insights = profile ? await selectReviewInsightsForBusiness(profile.id) : [];
+  const actionSuggestions = buildRichActionSuggestions(
     insights.slice(0, 20).map((i) => ({
       entityName: i.entityName,
       aspect: i.aspect,
@@ -78,6 +89,7 @@ router.get("/dashboard", requireAuth, async (req: AuthRequest, res) => {
       severity: i.severity as "low" | "medium" | "high",
     })),
     normalizeIndustry((await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1))[0]?.industry),
+    [],
   );
 
   res.json({
@@ -307,19 +319,27 @@ router.get("/reports/industry", requireAuth, async (req: AuthRequest, res) => {
       actionSuggestions: [],
       riskAlerts: [],
       weeklyReport: null,
+      priorTrend: { positive: 0, neutral: 0, negative: 0 },
+      momentum: { negativeDeltaPercent: null, summary: "No profile yet." },
+      aspectMomentum: [],
+      careTeamInsights: [],
+      travelEarlyWarning: null,
+      hospitalityTrendSummary: null,
     });
     return;
   }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
   const industry = normalizeIndustry(user?.industry);
-  const from = new Date(Date.now() - window * 24 * 60 * 60 * 1000);
-  const insights = await db.select().from(reviewInsightsTable).where(eq(reviewInsightsTable.businessId, profile.id));
-  const filtered = insights.filter((i) => new Date(i.createdAt) >= from);
-  const trend = {
-    positive: filtered.filter((i) => i.sentiment === "positive").length,
-    neutral: filtered.filter((i) => i.sentiment === "neutral").length,
-    negative: filtered.filter((i) => i.sentiment === "negative").length,
-  };
+  const windowDays = [7, 30, 90].includes(window) ? window : 30;
+
+  const allInsights = await selectReviewInsightsForBusiness(profile.id);
+  const { current: filtered, prior: priorFiltered } = splitCurrentPriorInsights(allInsights, windowDays);
+
+  const trend = sentimentTrend(filtered);
+  const priorTrend = sentimentTrend(priorFiltered);
+  const aspectMomentum = buildAspectMomentum(filtered, priorFiltered);
+  const momentum = negativeSentimentMomentum(trend, priorTrend);
+
   const byEntity = new Map<string, { pos: number; neg: number }>();
   for (const i of filtered) {
     const key = i.entityName ?? i.aspect;
@@ -349,17 +369,26 @@ router.get("/reports/industry", requireAuth, async (req: AuthRequest, res) => {
     confidence: Number(i.confidence),
     severity: i.severity as "low" | "medium" | "high",
   }));
-  const actionSuggestions = buildActionSuggestions(suggestionInput, industry);
+  const actionSuggestions = buildRichActionSuggestions(suggestionInput, industry, aspectMomentum);
   const riskAlerts = filtered
-    .filter((i) => i.severity === "high" || /legal|safety|unsafe|billing|fraud|infection/i.test(i.reason ?? ""))
+    .filter((i) => i.severity === "high" || /legal|safety|unsafe|billing|fraud|infection|malpractice/i.test(i.reason ?? ""))
     .slice(0, 5)
     .map((i) => ({ aspect: i.aspect, reason: i.reason, severity: i.severity }));
-  const [weeklyReport] = await db
-    .select()
-    .from(weeklyReportsTable)
-    .where(eq(weeklyReportsTable.businessId, profile.id))
-    .orderBy(desc(weeklyReportsTable.createdAt))
-    .limit(1);
+
+  const reviewsRows = await db.select().from(reviewsTable).where(eq(reviewsTable.userId, req.userId!));
+  const windowMs = windowDays * 24 * 60 * 60 * 1000;
+  const reviewsInWindow = reviewsRows.filter((r) => new Date(r.createdAt).getTime() >= Date.now() - windowMs);
+  const careTeamInsights =
+    industry === "healthcare" ? aggregateCareTeamInsights(reviewsInWindow.map((r) => ({ text: r.text }))) : [];
+
+  const { current: weekCur, prior: weekPrior } = splitCurrentPriorInsights(allInsights, 7);
+  const travelEarlyWarning =
+    industry === "travel" ? computeTravelEarlyWarning(weekCur, weekPrior) : null;
+
+  const hospitalityTrendSummary =
+    industry === "hospitality" ? buildHospitalityTrendSummary(aspectMomentum) : null;
+
+  const weeklyReport = await selectLatestWeeklyReportForBusiness(profile.id);
   res.json({
     industry,
     topPraisedItems,
@@ -369,8 +398,46 @@ router.get("/reports/industry", requireAuth, async (req: AuthRequest, res) => {
     trend,
     actionSuggestions,
     riskAlerts,
-    weeklyReport: weeklyReport ?? null,
+    weeklyReport,
+    priorTrend,
+    momentum,
+    aspectMomentum,
+    careTeamInsights,
+    travelEarlyWarning,
+    hospitalityTrendSummary,
   });
+});
+
+router.get("/reports/weekly", requireAuth, async (req: AuthRequest, res) => {
+  const [profile] = await db.select().from(businessProfilesTable).where(eq(businessProfilesTable.userId, req.userId!)).limit(1);
+  if (!profile) {
+    res.json({ reports: [] });
+    return;
+  }
+  try {
+    const rows = await db
+      .select()
+      .from(weeklyReportsTable)
+      .where(eq(weeklyReportsTable.businessId, profile.id))
+      .orderBy(desc(weeklyReportsTable.createdAt))
+      .limit(52);
+    res.json({
+      reports: rows.map((r) => ({
+        id: r.id,
+        summary: r.summary,
+        topWins: r.topWins,
+        attentionAreas: r.attentionAreas,
+        recommendedAction: r.recommendedAction,
+        createdAt: r.createdAt,
+      })),
+    });
+  } catch (error) {
+    if (isMissingTableError(error, "weekly_reports")) {
+      res.json({ reports: [] });
+      return;
+    }
+    throw error;
+  }
 });
 
 router.post("/reports/weekly/generate", requireAuth, async (req: AuthRequest, res) => {
@@ -383,13 +450,13 @@ router.post("/reports/weekly/generate", requireAuth, async (req: AuthRequest, re
   const industry = normalizeIndustry(user?.industry);
   const periodEnd = new Date();
   const periodStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const insights = await db.select().from(reviewInsightsTable).where(eq(reviewInsightsTable.businessId, profile.id));
+  const insights = await selectReviewInsightsForBusiness(profile.id);
   const recent = insights.filter((i) => new Date(i.createdAt) >= periodStart);
   const positives = recent.filter((i) => i.sentiment === "positive").length;
   const negatives = recent.filter((i) => i.sentiment === "negative").length;
   const topWins = recent.filter((i) => i.sentiment === "positive").slice(0, 3).map((i) => `${i.aspect}${i.entityName ? ` (${i.entityName})` : ""}`);
   const attentionAreas = recent.filter((i) => i.sentiment === "negative").slice(0, 3).map((i) => `${i.aspect}${i.entityName ? ` (${i.entityName})` : ""}`);
-  const suggestions = buildActionSuggestions(
+  const suggestions = buildRichActionSuggestions(
     recent.map((i) => ({
       entityName: i.entityName,
       aspect: i.aspect,
@@ -399,25 +466,32 @@ router.post("/reports/weekly/generate", requireAuth, async (req: AuthRequest, re
       severity: i.severity as "low" | "medium" | "high",
     })),
     industry,
+    [],
   );
   const summary = `This week you received ${positives} positive and ${negatives} negative industry-specific feedback signals.`;
   const recommendedAction = suggestions[0] ?? "Monitor trends and keep response quality high.";
-  await db.insert(weeklyReportsTable).values({
-    businessId: profile.id,
-    industry,
-    periodStart,
-    periodEnd,
-    summary,
-    topWins,
-    attentionAreas,
-    recommendedAction,
-  });
-  const [report] = await db
-    .select()
-    .from(weeklyReportsTable)
-    .where(eq(weeklyReportsTable.businessId, profile.id))
-    .orderBy(desc(weeklyReportsTable.createdAt))
-    .limit(1);
+  try {
+    await db.insert(weeklyReportsTable).values({
+      businessId: profile.id,
+      industry,
+      periodStart,
+      periodEnd,
+      summary,
+      topWins,
+      attentionAreas,
+      recommendedAction,
+    });
+  } catch (error) {
+    if (isMissingTableError(error, "weekly_reports")) {
+      res.status(503).json({
+        error:
+          "Database schema is missing weekly_reports. Apply migrations in lib/db (e.g. pnpm migrate from @workspace/db).",
+      });
+      return;
+    }
+    throw error;
+  }
+  const report = await selectLatestWeeklyReportForBusiness(profile.id);
   res.status(201).json(report);
 });
 
