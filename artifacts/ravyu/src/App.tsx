@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/components/auth/auth-provider";
-import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
@@ -28,6 +28,8 @@ import PlansPage from "@/pages/plans";
 import PricingPage from "@/pages/pricing";
 import { AppLayout } from "@/components/layout/app-layout";
 
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+if (base) setBaseUrl(base);
 setAuthTokenGetter(() => localStorage.getItem("accessToken"));
 
 const queryClient = new QueryClient({
