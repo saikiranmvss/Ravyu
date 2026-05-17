@@ -39,10 +39,11 @@ jobs:
       - name: Create artifact
         run: |
           TS=$(date -u +%Y%m%d_%H%M%S)
-          echo "ARTIFACT=ravyu-${GITHUB_SHA::7}-${TS}.tar.gz" >> "$GITHUB_ENV"
+          ARTIFACT="ravyu-${GITHUB_SHA::7}-${TS}.tar.gz"
           tar -czf "${ARTIFACT}" --exclude=node_modules --exclude=.git \
             package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json tsconfig.base.json \
             artifacts lib scripts
+          echo "ARTIFACT=${ARTIFACT}" >> "$GITHUB_ENV"
       - uses: actions/upload-artifact@v4
         with:
           name: deploy-artifact
