@@ -78,9 +78,10 @@ main() {
   health_check
   prune_releases
 
-  # SSL when domain configured
   if [[ "${DEPLOY_MODE}" == "domain" && -n "${APP_DOMAIN:-}" ]]; then
-    bash "${SCRIPTS_ROOT}/setup-ssl.sh" || log "WARN: SSL setup skipped or failed (non-fatal)"
+    bash "${SCRIPTS_ROOT}/setup-ssl.sh"
+    render_nginx_config
+    nginx_test_reload
   fi
 
   sync_deploy_scripts "${SCRIPTS_ROOT}"
