@@ -55,7 +55,7 @@ export default function OnboardingPage() {
       {
         onSuccess: () => {
           toast.success("Profile complete! Welcome to Ravyu.");
-          setLocation("/dashboard");
+          setLocation("/login");
         },
         onError: () => toast.error("Something went wrong. Please try again."),
       },
