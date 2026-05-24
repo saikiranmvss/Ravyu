@@ -34,11 +34,7 @@ export default function LoginPage() {
       {
         onSuccess: (data) => {
           login(data.accessToken, data.refreshToken);
-          if (!data.user.profileComplete) {
-            setLocation("/onboarding");
-          } else {
-            setLocation("/dashboard");
-          }
+          setLocation("/dashboard");
         },
         onError: (err: unknown) => {
           const msg = (err as { data?: { error?: string } })?.data?.error ?? "Invalid email or password";

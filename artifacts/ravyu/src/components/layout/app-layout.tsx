@@ -152,12 +152,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, isLoading, setLocation]);
 
-  useEffect(() => {
-    if (!isLoading && user && !user.profileComplete) {
-      setLocation("/onboarding");
-    }
-  }, [user, isLoading, setLocation]);
-
   const handleLogout = () => {
     const refreshToken = localStorage.getItem("refreshToken") ?? "";
     logoutMutation.mutate({ data: { refreshToken } } as never);
